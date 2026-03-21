@@ -12,5 +12,8 @@ interface MetricRecordDao {
     suspend fun deleteImported()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(item: MetricRecordEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<MetricRecordEntity>)
 }

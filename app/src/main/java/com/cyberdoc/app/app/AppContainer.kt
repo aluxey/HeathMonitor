@@ -8,6 +8,7 @@ import com.cyberdoc.app.data.repository.DefaultSourceRepository
 import com.cyberdoc.app.domain.repository.DashboardRepository
 import com.cyberdoc.app.domain.repository.GoalRepository
 import com.cyberdoc.app.domain.repository.SourceRepository
+import com.cyberdoc.app.domain.usecase.SaveManualWeightUseCase
 import com.cyberdoc.app.domain.usecase.SeedDemoDataUseCase
 import com.cyberdoc.app.domain.usecase.SyncHealthDataUseCase
 import com.cyberdoc.app.integration.healthconnect.HealthConnectGateway
@@ -21,6 +22,7 @@ interface AppContainer {
     val healthConnectManager: HealthConnectManager
     val seedDemoDataUseCase: SeedDemoDataUseCase
     val syncHealthDataUseCase: SyncHealthDataUseCase
+    val saveManualWeightUseCase: SaveManualWeightUseCase
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -52,4 +54,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
         database = database,
         gateway = HealthConnectGateway(healthConnectManager),
     )
+
+    override val saveManualWeightUseCase = SaveManualWeightUseCase(database)
 }

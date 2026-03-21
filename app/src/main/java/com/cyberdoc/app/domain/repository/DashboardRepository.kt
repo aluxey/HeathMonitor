@@ -5,5 +5,5 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 
 interface DashboardRepository {
-    fun observeToday(date: LocalDate): Flow<List<DashboardMetric>>
+    fun observeDashboard(date: LocalDate, periodDays: Int): Flow<List<DashboardMetric>>
 }

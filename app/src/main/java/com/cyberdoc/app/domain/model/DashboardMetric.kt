@@ -5,9 +5,11 @@ data class DashboardMetric(
     val title: String,
     val valueLabel: String,
     val targetLabel: String,
+    val deltaLabel: String,
     val freshnessLabel: String,
     val sourceLabel: String,
     val progress: Float,
     val trendLabel: String,
+    val trendPoints: List<TrendPoint>,
     val qualityFlag: QualityFlag,
 )

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +47,10 @@ fun CyberDocApp(
     var destination by remember { mutableStateOf(AppDestination.DASHBOARD) }
     val dashboardViewModel: DashboardViewModel = viewModel(
         factory = cyberDocViewModelFactory {
-            DashboardViewModel(container.dashboardRepository)
+            DashboardViewModel(
+                dashboardRepository = container.dashboardRepository,
+                saveManualWeightUseCase = container.saveManualWeightUseCase,
+            )
         },
     )
     val sourcesViewModel: SourcesViewModel = viewModel(
@@ -100,13 +102,16 @@ fun CyberDocApp(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
                         AppDestination.entries.forEach { item ->
                             Button(
                                 onClick = { destination = item },
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .weight(1f),
+                                    .width(160.dp),
                             ) {
                                 Text(text = item.label, color = MaterialTheme.colorScheme.onPrimary)
                             }

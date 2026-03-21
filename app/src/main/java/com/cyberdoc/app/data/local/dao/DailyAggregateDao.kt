@@ -12,6 +12,12 @@ interface DailyAggregateDao {
     @Query("SELECT * FROM daily_aggregate WHERE date = :date ORDER BY metric_type ASC")
     fun observeByDate(date: String): Flow<List<DailyAggregateEntity>>
 
+    @Query(
+        "SELECT * FROM daily_aggregate WHERE date >= :startDate AND date <= :endDate " +
+            "ORDER BY date ASC, metric_type ASC",
+    )
+    fun observeBetween(startDate: String, endDate: String): Flow<List<DailyAggregateEntity>>
+
     @Query("DELETE FROM daily_aggregate WHERE source_id IS NULL OR source_id != :manualSourceId")
     suspend fun deleteImported(manualSourceId: String)
 
