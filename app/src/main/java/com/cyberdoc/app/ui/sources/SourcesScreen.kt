@@ -24,6 +24,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyberdoc.app.domain.model.HealthConnectAvailability
 import com.cyberdoc.app.domain.model.SourceStatus
+import com.cyberdoc.app.domain.model.SyncStatus
 
 @Composable
 fun SourcesScreen(
@@ -75,6 +76,49 @@ fun SourcesScreen(
                                 } else {
                                     "Accorder les permissions"
                                 },
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = { viewModel.syncNow() },
+                            enabled = uiState.allPermissionsGranted && !uiState.isSyncing,
+                        ) {
+                            Text(
+                                if (uiState.isSyncing) {
+                                    "Synchronisation..."
+                                } else {
+                                    "Synchroniser maintenant"
+                                },
+                            )
+                        }
+                        if (!uiState.allPermissionsGranted) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "La synchro est activee quand toutes les permissions sont accordees.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    uiState.lastSyncMessage?.let { message ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = syncStatusLabel(uiState.lastSyncStatus),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        uiState.lastSyncRecordsRead?.let { records ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Enregistrements importes: $records",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -135,4 +179,12 @@ private fun statusLabel(status: SourceStatus): String = when (status) {
     SourceStatus.NEEDS_PERMISSION -> "Permissions requises"
     SourceStatus.UNAVAILABLE -> "Indisponible"
     SourceStatus.ERROR -> "Erreur"
+}
+
+private fun syncStatusLabel(status: SyncStatus?): String = when (status) {
+    SyncStatus.SUCCESS -> "Synchro terminee"
+    SyncStatus.PARTIAL_SUCCESS -> "Synchro partielle"
+    SyncStatus.FAILURE -> "Synchro en echec"
+    SyncStatus.IDLE -> "Synchro inactive"
+    null -> "Etat synchro inconnu"
 }
