@@ -58,6 +58,7 @@ fun CyberDocApp(
             SourcesViewModel(
                 sourceRepository = container.sourceRepository,
                 healthConnectManager = container.healthConnectManager,
+                syncHealthDataUseCase = container.syncHealthDataUseCase,
             )
         },
     )

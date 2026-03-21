@@ -22,10 +22,22 @@ class SyncHealthDataUseCase(
     private val database: CyberDocDatabase,
     private val gateway: HealthConnectGateway,
 ) {
-    suspend operator fun invoke() {
+    suspend operator fun invoke(): SyncHealthDataResult {
         val now = System.currentTimeMillis()
         val payload = gateway.readRecentData(daysBack = 30)
         val syncSucceeded = payload.records.isNotEmpty()
+        val syncStatus = when {
+            syncSucceeded -> SyncStatus.SUCCESS
+            payload.grantedPermissions.isNotEmpty() -> SyncStatus.PARTIAL_SUCCESS
+            else -> SyncStatus.FAILURE
+        }
+        val syncMessage = if (syncSucceeded) {
+            "Import Health Connect termine sur 30 jours"
+        } else if (payload.grantedPermissions.isNotEmpty()) {
+            "Health Connect accessible mais aucune donnee exploitable n'a ete importee"
+        } else {
+            "Impossible de lancer la synchro sans Health Connect disponible et autorise"
+        }
         val status = when {
             payload.availability != com.cyberdoc.app.domain.model.HealthConnectAvailability.AVAILABLE ->
                 SourceStatus.UNAVAILABLE
@@ -77,22 +89,18 @@ class SyncHealthDataUseCase(
                     sourceId = SeedDemoDataUseCase.HEALTH_CONNECT_SOURCE_ID,
                     startedAt = now,
                     endedAt = now,
-                    status = when {
-                        syncSucceeded -> SyncStatus.SUCCESS
-                        payload.grantedPermissions.isNotEmpty() -> SyncStatus.PARTIAL_SUCCESS
-                        else -> SyncStatus.FAILURE
-                    },
+                    status = syncStatus,
                     recordsRead = payload.records.size,
-                    message = if (syncSucceeded) {
-                        "Import Health Connect termine sur 30 jours"
-                    } else if (payload.grantedPermissions.isNotEmpty()) {
-                        "Health Connect accessible mais aucune donnee exploitable n'a ete importee"
-                    } else {
-                        "Impossible de lancer la synchro sans Health Connect disponible et autorise"
-                    },
+                    message = syncMessage,
                 ),
             )
         }
+
+        return SyncHealthDataResult(
+            status = syncStatus,
+            recordsRead = payload.records.size,
+            message = syncMessage,
+        )
     }
 
     private fun buildSourceEntities(
@@ -235,3 +243,9 @@ class SyncHealthDataUseCase(
         val lastTimestamp: Long,
     )
 }
+
+data class SyncHealthDataResult(
+    val status: SyncStatus,
+    val recordsRead: Int,
+    val message: String,
+)
