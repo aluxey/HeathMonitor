@@ -10,6 +10,8 @@ Cette documentation cadre le projet avant démarrage du développement.
 - [04-roadmap-decisions-risks.md](04-roadmap-decisions-risks.md) : roadmap, arbitrages, risques, décisions à figer avant de coder
 - [05-sprint-1-backlog.md](05-sprint-1-backlog.md) : backlog d'exécution pour transformer les fondations en premier incrément testable
 - [06-zepp-sync-decision.md](06-zepp-sync-decision.md) : décision MVP sur la place de Zepp face à Health Connect
+- [07-backend-health-connect-plan.md](07-backend-health-connect-plan.md) : plan backend de référence basé sur Health Connect comme source unique
+- [08-backend-implementation-readme.md](08-backend-implementation-readme.md) : README d'implémentation backend avec checklist et ordre des tickets
 
 ## Positionnement retenu
 
