@@ -19,3 +19,8 @@ data class UnexpectedError(
     override val message: String,
     override val code: String = "unexpected_error",
 ) : AppError
+
+data class IntegrationUnavailableError(
+    override val message: String,
+    override val code: String = "integration_unavailable",
+) : AppError

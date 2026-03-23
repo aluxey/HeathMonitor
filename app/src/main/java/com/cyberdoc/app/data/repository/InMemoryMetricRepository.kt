@@ -14,6 +14,23 @@ class InMemoryMetricRepository(
         store.metrics += record
     }
 
+    override suspend fun upsertAll(records: List<MetricRecord>) {
+        records.forEach { incoming ->
+            val index = store.metrics.indexOfFirst {
+                it.metricType == incoming.metricType &&
+                    it.startAt == incoming.startAt &&
+                    it.endAt == incoming.endAt &&
+                    it.sourceId == incoming.sourceId &&
+                    it.externalId == incoming.externalId
+            }
+            if (index == -1) {
+                store.metrics += incoming
+            } else {
+                store.metrics[index] = incoming
+            }
+        }
+    }
+
     override suspend fun findByDay(day: LocalDate): List<MetricRecord> =
         store.metrics.filter {
             it.startAt.atZone(ZoneOffset.UTC).toLocalDate() == day
