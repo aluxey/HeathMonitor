@@ -1,9 +1,7 @@
 package com.cyberdoc.app.domain.repository
 
-import com.cyberdoc.app.domain.model.DashboardMetric
-import java.time.LocalDate
-import kotlinx.coroutines.flow.Flow
+import com.cyberdoc.app.domain.model.DashboardSnapshot
 
 interface DashboardRepository {
-    fun observeDashboard(date: LocalDate, periodDays: Int): Flow<List<DashboardMetric>>
+    suspend fun snapshot(): DashboardSnapshot
 }

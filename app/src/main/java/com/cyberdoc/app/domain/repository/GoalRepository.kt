@@ -1,8 +1,10 @@
 package com.cyberdoc.app.domain.repository
 
-import com.cyberdoc.app.data.local.entity.GoalEntity
-import kotlinx.coroutines.flow.Flow
+import com.cyberdoc.app.domain.model.Goal
+import com.cyberdoc.app.domain.model.MetricType
 
 interface GoalRepository {
-    fun observeGoals(): Flow<List<GoalEntity>>
+    suspend fun activeGoals(): List<Goal>
+    suspend fun upsert(goal: Goal)
+    suspend fun activeGoal(metricType: MetricType): Goal?
 }

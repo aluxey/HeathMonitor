@@ -1,8 +1,9 @@
 package com.cyberdoc.app.domain.repository
 
-import com.cyberdoc.app.domain.model.SourceStatusItem
-import kotlinx.coroutines.flow.Flow
+import com.cyberdoc.app.domain.model.DataSource
 
 interface SourceRepository {
-    fun observeSources(): Flow<List<SourceStatusItem>>
+    suspend fun all(): List<DataSource>
+    suspend fun upsert(source: DataSource)
+    suspend fun byId(id: String): DataSource?
 }
