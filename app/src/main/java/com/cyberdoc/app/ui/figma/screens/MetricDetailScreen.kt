@@ -1,6 +1,7 @@
 package com.cyberdoc.app.ui.figma.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import com.cyberdoc.app.ui.figma.components.TrendChart
 import com.cyberdoc.app.ui.figma.model.MetricUi
 import com.cyberdoc.app.ui.figma.navigation.Period
 import com.cyberdoc.app.ui.theme.Chart2
+import java.util.Locale
 
 @Composable
 fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
@@ -55,12 +57,18 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                         Text(metric.unit, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     metric.trendLabel?.let {
-                        Text(it + " vs last week", style = MaterialTheme.typography.bodySmall, color = if (metric.trendUp) Chart2 else MaterialTheme.colorScheme.error)
+                        Text(
+                            it + " vs last week",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (metric.trendUp) Chart2 else MaterialTheme.colorScheme.error,
+                        )
                     }
                     if (metric.goal != null) {
                         LinearProgressIndicator(
                             progress = { goalProgress },
-                            modifier = Modifier.fillMaxSize().height(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
                             color = metric.color,
                             trackColor = MaterialTheme.colorScheme.surface,
                         )
@@ -89,13 +97,13 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatValueCard(
                     label = "Average",
-                    value = (data.sum() / data.size).toString().take(5),
+                    value = String.format(Locale.US, "%.1f", data.sum() / data.size),
                     unit = metric.unit,
                     modifier = Modifier.weight(1f),
                 )
                 StatValueCard(
                     label = "Best",
-                    value = data.maxOrNull()?.toString()?.take(5) ?: "-",
+                    value = data.maxOrNull()?.let { String.format(Locale.US, "%.1f", it) } ?: "-",
                     unit = metric.unit,
                     modifier = Modifier.weight(1f),
                 )

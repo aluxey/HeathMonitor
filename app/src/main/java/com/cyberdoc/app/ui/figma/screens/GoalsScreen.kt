@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cyberdoc.app.ui.figma.components.GoalCard
 import kotlin.math.roundToInt
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun GoalsScreen() {
@@ -30,6 +33,9 @@ fun GoalsScreen() {
     }
     val achieved = goals.count { it.second >= it.third }
     val rate = ((achieved.toFloat() / goals.size) * 100).roundToInt()
+    val todayLabel = remember {
+        LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d", Locale.getDefault()))
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -38,7 +44,7 @@ fun GoalsScreen() {
     ) {
         item {
             Text("Goals and Progress", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Track your wellness targets", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Track your wellness targets - $todayLabel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
             Card(

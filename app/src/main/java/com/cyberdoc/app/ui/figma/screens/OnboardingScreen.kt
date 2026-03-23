@@ -53,6 +53,7 @@ fun OnboardingScreen(
             Text(
                 text = "Skip",
                 modifier = Modifier.clickable(onClick = onSkip),
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

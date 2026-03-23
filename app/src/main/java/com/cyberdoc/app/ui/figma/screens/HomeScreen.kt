@@ -28,18 +28,20 @@ import com.cyberdoc.app.ui.theme.Chart4
 @Composable
 fun HomeScreen(
     metrics: List<MetricUi>,
+    todayLabel: String,
     onOpenSummary: () -> Unit,
     onOpenManual: () -> Unit,
     onOpenGoals: () -> Unit,
     onOpenHealthConnect: () -> Unit,
     onOpenMetric: (String) -> Unit,
 ) {
-    val stepsMetric = metrics.first { it.id == "steps" }
-    val heartMetric = metrics.first { it.id == "heart" }
+    val stepsMetric = metrics.firstOrNull { it.id == "steps" }
+    val heartMetric = metrics.firstOrNull { it.id == "heart" }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         item {
             Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 1.dp) {
@@ -51,7 +53,7 @@ fun HomeScreen(
                     ) {
                         Column {
                             Text("Today", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                            Text("Monday, March 23", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(todayLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Surface(
                             modifier = Modifier.clickable(onClick = onOpenSummary),
@@ -70,8 +72,22 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatWidget(label = "Steps today", value = stepsMetric.value, color = Chart1, modifier = Modifier.weight(1f))
-                        StatWidget(label = "Avg heart rate", value = heartMetric.value + " bpm", color = Chart4, modifier = Modifier.weight(1f))
+                        StatWidget(
+                            label = "Steps today",
+                            value = stepsMetric?.value ?: "--",
+                            color = Chart1,
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatWidget(
+                            label = "Avg heart rate",
+                            value = if (heartMetric?.value != null && heartMetric.value != "--") {
+                                heartMetric.value + " bpm"
+                            } else {
+                                "--"
+                            },
+                            color = Chart4,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
@@ -96,6 +112,19 @@ fun HomeScreen(
 
                 metrics.forEach { metric ->
                     MetricCard(metric = metric, onClick = { onOpenMetric(metric.id) })
+                }
+                if (metrics.isEmpty()) {
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Text(
+                            text = "No synced metrics yet. Check Health Connect permissions.",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

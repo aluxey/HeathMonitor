@@ -22,11 +22,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cyberdoc.app.ui.figma.components.SmallBackChip
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun DailySummaryScreen(onBack: () -> Unit) {
     val scores = remember { listOf(85, 78, 92, 88, 95, 90, 87) }
     val labels = remember { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") }
+    val todayLabel = remember {
+        LocalDate.now().format(
+            DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()),
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -38,7 +46,7 @@ fun DailySummaryScreen(onBack: () -> Unit) {
                 SmallBackChip(onClick = onBack)
                 androidx.compose.foundation.layout.Column {
                     Text("Daily Summary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("Monday, March 23", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(todayLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

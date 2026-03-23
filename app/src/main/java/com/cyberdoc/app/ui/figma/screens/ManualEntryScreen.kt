@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import com.cyberdoc.app.ui.figma.components.SmallBackChip
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -83,10 +85,12 @@ fun ManualEntryScreen(onBack: () -> Unit) {
                         onValueChange = { value = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Enter value ($unit)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
                     )
                     Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                         Text(
-                            text = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE MMM d, HH:mm", Locale.US)),
+                            text = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE MMM d, HH:mm", Locale.getDefault())),
                             modifier = Modifier.padding(10.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
