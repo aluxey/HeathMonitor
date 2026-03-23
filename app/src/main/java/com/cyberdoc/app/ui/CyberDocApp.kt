@@ -1,6 +1,7 @@
 package com.cyberdoc.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -35,9 +35,9 @@ import com.cyberdoc.app.ui.dashboard.DashboardViewModel
 import com.cyberdoc.app.ui.sources.SourcesScreen
 import com.cyberdoc.app.ui.sources.SourcesViewModel
 
-private enum class AppDestination(val label: String) {
-    DASHBOARD("Aujourd'hui"),
-    SOURCES("Sources"),
+private enum class AppDestination(val label: String, val eyebrow: String) {
+    DASHBOARD("Aujourd'hui", "Vue rapide"),
+    SOURCES("Sources", "Connectivite"),
 }
 
 @Composable
@@ -73,9 +73,9 @@ fun CyberDocApp(
                 .background(
                     brush = Brush.verticalGradient(
                         listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.95f),
                             MaterialTheme.colorScheme.background,
-                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.20f),
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
                         ),
                     ),
                 )
@@ -83,38 +83,71 @@ fun CyberDocApp(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.84f),
+                shadowElevation = 2.dp,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Text(
-                        text = "CyberDoc",
+                        text = "Health Monitor",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Dashboard wellbeing, simple et premium.",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Tableau de bord sante personnel local-first pour le MVP Android.",
+                        text = "Consulte l'essentiel, capte les tendances, puis agis en un geste.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.height(18.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         AppDestination.entries.forEach { item ->
-                            Button(
-                                onClick = { destination = item },
+                            val selected = destination == item
+                            Surface(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .width(160.dp),
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .clickable { destination = item },
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                                },
+                                contentColor = if (selected) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                tonalElevation = if (selected) 0.dp else 1.dp,
                             ) {
-                                Text(text = item.label, color = MaterialTheme.colorScheme.onPrimary)
+                                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                                    Text(
+                                        text = item.eyebrow,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (selected) {
+                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = item.label,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
                             }
                         }
                     }

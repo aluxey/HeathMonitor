@@ -2,11 +2,26 @@ package com.cyberdoc.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Clay50 = Color(0xFFF7F1E8)
-val Clay100 = Color(0xFFE9D8C5)
-val Clay700 = Color(0xFF7F5339)
-val Ink900 = Color(0xFF1D1B18)
-val Moss300 = Color(0xFF89A87B)
-val Moss700 = Color(0xFF355B3F)
-val Coral300 = Color(0xFFE0A28A)
-val Coral700 = Color(0xFF8B4B36)
+val Sand50 = Color(0xFFFCF8F2)
+val Sand100 = Color(0xFFF3ECE2)
+val Sand200 = Color(0xFFE7DDD0)
+val Sand300 = Color(0xFFD6CAB8)
+
+val Sage50 = Color(0xFFF1F5EF)
+val Sage100 = Color(0xFFDCE8D8)
+val Sage300 = Color(0xFFADC4A5)
+val Sage500 = Color(0xFF6E8C69)
+val Sage700 = Color(0xFF4F6A51)
+
+val Olive300 = Color(0xFFC0B98D)
+val Olive600 = Color(0xFF7B7753)
+
+val Ink900 = Color(0xFF1F241F)
+val Ink700 = Color(0xFF48514A)
+val Ink500 = Color(0xFF6C766F)
+val Mist300 = Color(0xFFD8DED8)
+
+val Success = Color(0xFF4E7A57)
+val Warning = Color(0xFFAF7C43)
+val ErrorSoft = Color(0xFFB4675D)
+val Info = Color(0xFF6E8C69)
