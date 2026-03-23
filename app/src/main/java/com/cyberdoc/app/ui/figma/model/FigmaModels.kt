@@ -36,7 +36,7 @@ fun metricsData(): List<MetricUi> = listOf(
         color = Chart1,
         goal = 10000f,
         weekData = listOf(7234f, 8912f, 9456f, 8123f, 10234f, 9876f, 8547f),
-        monthData = listOf(7234f, 8912f, 9456f, 8123f, 10234f, 9876f, 8547f),
+        monthData = listOf(7234f, 8456f, 9102f, 9754f, 8123f, 9340f, 10234f),
     ),
     MetricUi(
         id = "heart",
@@ -49,7 +49,7 @@ fun metricsData(): List<MetricUi> = listOf(
         color = Chart4,
         goal = null,
         weekData = listOf(74f, 73f, 75f, 71f, 72f, 70f, 72f),
-        monthData = listOf(74f, 73f, 75f, 71f, 72f, 70f, 72f),
+        monthData = listOf(74f, 76f, 75f, 72f, 71f, 70f, 72f),
     ),
     MetricUi(
         id = "sleep",
@@ -62,7 +62,7 @@ fun metricsData(): List<MetricUi> = listOf(
         color = Chart5,
         goal = 8f,
         weekData = listOf(7.2f, 6.8f, 7.5f, 8.1f, 7.0f, 8.5f, 7.5f),
-        monthData = listOf(7.2f, 6.8f, 7.5f, 8.1f, 7.0f, 8.5f, 7.5f),
+        monthData = listOf(6.9f, 7.4f, 7.0f, 8.1f, 7.8f, 8.3f, 7.5f),
     ),
     MetricUi(
         id = "activity",
@@ -75,7 +75,7 @@ fun metricsData(): List<MetricUi> = listOf(
         color = Chart2,
         goal = 60f,
         weekData = listOf(35f, 42f, 50f, 38f, 55f, 60f, 45f),
-        monthData = listOf(35f, 42f, 50f, 38f, 55f, 60f, 45f),
+        monthData = listOf(30f, 38f, 47f, 54f, 40f, 60f, 45f),
     ),
     MetricUi(
         id = "hydration",
@@ -88,176 +88,55 @@ fun metricsData(): List<MetricUi> = listOf(
         color = Chart3,
         goal = 2.5f,
         weekData = listOf(2.1f, 1.9f, 2.3f, 1.7f, 2.0f, 2.4f, 1.8f),
-        monthData = listOf(2.1f, 1.9f, 2.3f, 1.7f, 2.0f, 2.4f, 1.8f),
+        monthData = listOf(1.8f, 2.1f, 2.2f, 2.0f, 1.9f, 2.4f, 1.8f),
     ),
 )
 
 fun dashboardSnapshotToMetrics(snapshot: DashboardSnapshot?): List<MetricUi> {
     if (snapshot == null) return metricsData()
 
-    val base = listOf(
-        baseMetric(MetricType.STEPS),
-        baseMetric(MetricType.HEART_RATE),
-        baseMetric(MetricType.SLEEP_DURATION),
-        baseMetric(MetricType.WEIGHT),
-        baseMetric(MetricType.HYDRATION),
-        baseMetric(MetricType.CALORIES_IN),
+    val fallbackByType = listOf(
+        MetricType.STEPS to metricsData().first { it.id == "steps" },
+        MetricType.HEART_RATE to metricsData().first { it.id == "heart" },
+        MetricType.SLEEP_DURATION to metricsData().first { it.id == "sleep" },
+        MetricType.EXERCISE_DURATION to metricsData().first { it.id == "activity" },
+        MetricType.HYDRATION to metricsData().first { it.id == "hydration" },
     )
 
-    val byType = snapshot.metrics.associateBy { it.metricType }
-    return base.map { item ->
-        val data = byType[item.metricType] ?: return@map item.fallback
-        val value = when (item.metricType) {
-            MetricType.STEPS -> data.value.toInt().toString()
-            MetricType.SLEEP_DURATION -> String.format(Locale.US, "%.1f", data.value / 60.0)
-            MetricType.HYDRATION -> String.format(Locale.US, "%.1f", data.value / 1000.0)
-            MetricType.WEIGHT -> String.format(Locale.US, "%.1f", data.value)
-            MetricType.CALORIES_IN -> data.value.toInt().toString()
-            MetricType.HEART_RATE -> data.value.toInt().toString()
-            MetricType.EXERCISE_DURATION -> data.value.toInt().toString()
-        }
-
-        item.fallback.copy(
-            value = value,
-            unit = item.displayUnit,
-            trendLabel = if (data.trendPercent == 0.0) null else "${if (data.trendPercent > 0) "+" else ""}${data.trendPercent.toInt()}%",
-            trendUp = data.trendPercent >= 0,
-            source = "Synced",
+    val snapshotByType = snapshot.metrics.associateBy { it.metricType }
+    return fallbackByType.map { (type, fallback) ->
+        val metric = snapshotByType[type] ?: return@map fallback.copy(source = fallback.source)
+        fallback.copy(
+            value = formatSnapshotValue(type, metric.value),
+            unit = displayUnit(type),
+            trendLabel = metric.trendPercent.takeIf { it != 0.0 }?.let { trend ->
+                "${if (trend > 0) "+" else ""}${trend.toInt()}%"
+            },
+            trendUp = metric.trendPercent >= 0,
+            source = if (type == MetricType.HYDRATION) "Manual" else "Synced",
         )
     }
 }
 
-private data class MetricTemplate(
-    val metricType: MetricType,
-    val displayUnit: String,
-    val fallback: MetricUi,
-)
+private fun displayUnit(metricType: MetricType): String =
+    when (metricType) {
+        MetricType.STEPS -> "steps"
+        MetricType.HEART_RATE -> "bpm"
+        MetricType.SLEEP_DURATION -> "hours"
+        MetricType.EXERCISE_DURATION -> "min"
+        MetricType.HYDRATION -> "liters"
+        MetricType.WEIGHT -> "kg"
+        MetricType.CALORIES_IN -> "kcal"
+    }
 
-private fun baseMetric(type: MetricType): MetricTemplate =
-    when (type) {
-        MetricType.STEPS -> MetricTemplate(
-            metricType = type,
-            displayUnit = "steps",
-            fallback = MetricUi(
-                id = "steps",
-                title = "Steps",
-                value = "--",
-                unit = "steps",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart1,
-                goal = 10000f,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
+private fun formatSnapshotValue(metricType: MetricType, rawValue: Double): String =
+    when (metricType) {
+        MetricType.STEPS,
+        MetricType.HEART_RATE,
+        MetricType.EXERCISE_DURATION,
+        MetricType.CALORIES_IN -> rawValue.toInt().toString()
 
-        MetricType.HEART_RATE -> MetricTemplate(
-            metricType = type,
-            displayUnit = "bpm",
-            fallback = MetricUi(
-                id = "heart",
-                title = "Heart Rate",
-                value = "--",
-                unit = "bpm",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart4,
-                goal = null,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
-
-        MetricType.SLEEP_DURATION -> MetricTemplate(
-            metricType = type,
-            displayUnit = "hours",
-            fallback = MetricUi(
-                id = "sleep",
-                title = "Sleep",
-                value = "--",
-                unit = "hours",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart5,
-                goal = 8f,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
-
-        MetricType.WEIGHT -> MetricTemplate(
-            metricType = type,
-            displayUnit = "kg",
-            fallback = MetricUi(
-                id = "weight",
-                title = "Weight",
-                value = "--",
-                unit = "kg",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart2,
-                goal = null,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
-
-        MetricType.HYDRATION -> MetricTemplate(
-            metricType = type,
-            displayUnit = "liters",
-            fallback = MetricUi(
-                id = "hydration",
-                title = "Hydration",
-                value = "--",
-                unit = "liters",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart3,
-                goal = 2.5f,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
-
-        MetricType.CALORIES_IN -> MetricTemplate(
-            metricType = type,
-            displayUnit = "kcal",
-            fallback = MetricUi(
-                id = "calories",
-                title = "Calories",
-                value = "--",
-                unit = "kcal",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart2,
-                goal = null,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
-
-        MetricType.EXERCISE_DURATION -> MetricTemplate(
-            metricType = type,
-            displayUnit = "min",
-            fallback = MetricUi(
-                id = "activity",
-                title = "Active Minutes",
-                value = "--",
-                unit = "min",
-                trendLabel = null,
-                trendUp = true,
-                source = "Pending",
-                color = Chart2,
-                goal = 60f,
-                weekData = listOf(0f),
-                monthData = listOf(0f),
-            ),
-        )
+        MetricType.SLEEP_DURATION -> String.format(Locale.US, "%.1f", rawValue / 60.0)
+        MetricType.HYDRATION -> String.format(Locale.US, "%.1f", rawValue / 1000.0)
+        MetricType.WEIGHT -> String.format(Locale.US, "%.1f", rawValue)
     }

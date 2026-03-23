@@ -1,19 +1,23 @@
 package com.cyberdoc.app.ui.figma.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,70 +28,257 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.cyberdoc.app.ui.figma.components.SettingButton
-import com.cyberdoc.app.ui.figma.components.SettingSwitch
-import com.cyberdoc.app.ui.figma.components.StatValueCard
+import com.cyberdoc.app.ui.figma.components.SettingRow
+import com.cyberdoc.app.ui.figma.components.profileIcon
 
 @Composable
 fun ProfileScreen(
     onOpenGoals: () -> Unit,
     onOpenHealthConnect: () -> Unit,
 ) {
-    var notifications by remember { mutableStateOf(true) }
-    var darkMode by remember { mutableStateOf(false) }
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var darkModeEnabled by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("Profile", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(
-            "Manage your account, preferences and data sources.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+        item {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp,
             ) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
-                    Box(modifier = Modifier.size(54.dp), contentAlignment = Alignment.Center) {
-                        Text("JD", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
+                    Text(
+                        text = "Profile",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Box(
+                                modifier = Modifier.size(64.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "JD",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "John Doe",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "Local account",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("John Doe", fontWeight = FontWeight.SemiBold)
-                    Text("Local account", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatValueCard(label = "Avg Score", value = "87", unit = "", modifier = Modifier.weight(1f))
-            StatValueCard(label = "Days Active", value = "23", unit = "", modifier = Modifier.weight(1f))
-            StatValueCard(label = "Goals Met", value = "12", unit = "", modifier = Modifier.weight(1f))
-        }
+        item {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 18.dp),
+                    ) {
+                        SummaryStat(label = "Avg Score", value = "87", modifier = Modifier.weight(1f))
+                        SummaryStat(label = "Days Active", value = "23", modifier = Modifier.weight(1f))
+                        SummaryStat(label = "Goals Met", value = "12", modifier = Modifier.weight(1f))
+                    }
+                }
 
-        SettingButton("Health Connect", "5 data sources connected", onClick = onOpenHealthConnect)
-        SettingButton("Goals and Targets", "Manage your health goals", onClick = onOpenGoals)
-        SettingSwitch("Notifications", "Daily reminders and alerts", notifications) { notifications = it }
-        SettingSwitch("Dark Mode", "Switch to dark theme", darkMode) { darkMode = it }
+                SettingSection(title = "Health Data") {
+                    SettingRow(
+                        icon = profileIcon("health"),
+                        title = "Health Connect",
+                        subtitle = "5 data sources connected",
+                        onClick = onOpenHealthConnect,
+                    )
+                    SettingDivider()
+                    SettingRow(
+                        icon = profileIcon("goals"),
+                        title = "Goals & Targets",
+                        subtitle = "Manage your health goals",
+                        onClick = onOpenGoals,
+                    )
+                    SettingDivider()
+                    SettingRow(
+                        icon = profileIcon("storage"),
+                        title = "Data Storage",
+                        subtitle = "All data stored locally",
+                        onClick = {},
+                    )
+                }
 
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)) {
-            Text(
-                text = "100% private and local. All your health data stays on this device.",
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                SettingSection(title = "Preferences") {
+                    SettingRow(
+                        icon = profileIcon("notifications"),
+                        title = "Notifications",
+                        subtitle = "Daily reminders and alerts",
+                        onClick = { notificationsEnabled = !notificationsEnabled },
+                        trailing = {
+                            Switch(
+                                checked = notificationsEnabled,
+                                onCheckedChange = { notificationsEnabled = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                    )
+                    SettingDivider()
+                    SettingRow(
+                        icon = profileIcon("dark"),
+                        title = "Dark Mode",
+                        subtitle = "Switch to dark theme",
+                        onClick = { darkModeEnabled = !darkModeEnabled },
+                        trailing = {
+                            Switch(
+                                checked = darkModeEnabled,
+                                onCheckedChange = { darkModeEnabled = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                    )
+                }
+
+                SettingSection(title = "Support") {
+                    SettingRow(
+                        icon = profileIcon("help"),
+                        title = "Help & FAQ",
+                        subtitle = "Get help using the app",
+                        onClick = {},
+                    )
+                    SettingDivider()
+                    SettingRow(
+                        icon = profileIcon("privacy"),
+                        title = "Privacy Policy",
+                        subtitle = "How we protect your data",
+                        onClick = {},
+                    )
+                    SettingDivider()
+                    SettingRow(
+                        icon = profileIcon("about"),
+                        title = "About",
+                        subtitle = "Version 1.0.0",
+                        onClick = {},
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = "100% Private & Local",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "All your health data is stored exclusively on this device. No cloud sync, no third-party access.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun SettingSection(
+    title: String,
+    content: @Composable Column.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+@Composable
+private fun SummaryStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SettingDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp)
+            .height(1.dp)
+            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+    )
 }
