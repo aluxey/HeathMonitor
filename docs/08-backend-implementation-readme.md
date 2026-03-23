@@ -67,43 +67,43 @@ integration/healthconnect  ->  data/local  ->  domain/usecases  ->  ui
 
 ## Phase A - Integration Health Connect
 
-- [ ] Créer `HealthConnectRepository`.
-- [ ] Implémenter vérification disponibilité SDK.
-- [ ] Implémenter gestion permissions runtime.
-- [ ] Lire records : steps, sleep, weight, hydration, nutrition/calories.
-- [ ] Récupérer métadonnées de provenance (package/source).
-- [ ] Ajouter gestion erreurs techniques (permission/refus/SDK absent).
+- [x] Créer `HealthConnectRepository`.
+- [x] Implémenter vérification disponibilité SDK.
+- [x] Implémenter gestion permissions runtime.
+- [x] Lire records : steps, sleep, weight, hydration, nutrition/calories.
+- [x] Récupérer métadonnées de provenance (package/source).
+- [x] Ajouter gestion erreurs techniques (permission/refus/SDK absent).
 
 ## Phase B - Normalisation
 
-- [ ] Créer `MetricsNormalizer`.
-- [ ] Mapper chaque record Health Connect vers modèle interne.
-- [ ] Uniformiser unités (ex: kg, kcal, ml, minutes).
-- [ ] Ajouter flag `isManual` et `sourceApp`.
+- [x] Créer `MetricsNormalizer`.
+- [x] Mapper chaque record Health Connect vers modèle interne.
+- [x] Uniformiser unités (ex: kg, kcal, ml, minutes).
+- [x] Ajouter flag `isManual` et `sourceApp`.
 - [ ] Ajouter tests unitaires du mapping.
 
 ## Phase C - Persistance locale
 
-- [ ] Créer schéma Room complet (entités + dao + indices).
-- [ ] Implémenter repositories data (`Source`, `Metric`, `Aggregate`, `Sync`).
-- [ ] Ajouter upsert et déduplication robuste.
-- [ ] Ajouter migrations DB versionnées.
+- [x] Créer schéma Room complet (entités + dao + indices).
+- [x] Implémenter repositories data (`Source`, `Metric`, `Aggregate`, `Sync`).
+- [x] Ajouter upsert et déduplication robuste.
+- [~] Ajouter migrations DB versionnées (temporaire: destructive fallback MVP).
 - [ ] Ajouter tests DAO (insert/read/update/dedup).
 
 ## Phase D - Agrégation métier
 
-- [ ] Créer `DailySummaryUseCase`.
-- [ ] Calculer agrégats journaliers par type.
+- [x] Créer agrégateur métier (`DailyAggregateCalculator`).
+- [x] Calculer agrégats journaliers par type.
 - [ ] Calculer tendance 7 jours.
 - [ ] Calculer source principale + dernier update.
 - [ ] Ajouter tests métier sur cas limites (données manquantes, doublons).
 
 ## Phase E - Synchronisation
 
-- [ ] Créer `SyncHealthDataUseCase`.
-- [ ] Pipeline : `read -> normalize -> persist -> aggregate -> sync_run`.
-- [ ] Gérer statut sync (`SUCCESS/PARTIAL/FAILED`) et message.
-- [ ] Déclenchement :
+- [x] Créer `SyncHealthDataUseCase`.
+- [x] Pipeline : `read -> normalize -> persist -> aggregate -> sync_run`.
+- [x] Gérer statut sync (`SUCCESS/PARTIAL/FAILED`) et message.
+- [x] Déclenchement :
   - ouverture app,
   - action manuelle utilisateur,
   - tâche planifiée légère (`WorkManager`) si conservé.
@@ -111,11 +111,11 @@ integration/healthconnect  ->  data/local  ->  domain/usecases  ->  ui
 
 ## Phase F - Exposition UI
 
-- [ ] Créer `DashboardRepository` orienté lecture UI.
-- [ ] Exposer `DashboardSnapshot` prêt à rendre.
-- [ ] Connecter ViewModel dashboard au use case.
-- [ ] Créer écran `Permissions et sources` (état réel backend).
-- [ ] Gérer états UI : loading, empty, partial data, error.
+- [x] Créer `DashboardRepository` orienté lecture UI.
+- [x] Exposer `DashboardSnapshot` prêt à rendre.
+- [~] Connecter ViewModel/dashboard UI au use case (branchage direct Compose en cours, ViewModel dédié restant).
+- [x] Créer écran `Permissions et sources` (état réel backend).
+- [x] Gérer états UI : loading, empty, partial data, error.
 
 ## Tickets ordonnés (ordre recommandé)
 
