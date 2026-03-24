@@ -572,9 +572,37 @@ fun TrendChart(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val safeData = if (data.isNotEmpty()) data else listOf(0f)
-    val safeLabels = if (labels.size == safeData.size) labels else defaultChartLabels(safeData.size)
-    val upperBound = niceUpperBound(safeData.maxOrNull() ?: 0f)
+    if (data.isEmpty()) {
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "No data yet",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "This chart will appear after the next sync or manual entry.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        return
+    }
+
+    val safeLabels = if (labels.size == data.size) labels else defaultChartLabels(data.size)
+    val upperBound = niceUpperBound(data.maxOrNull() ?: 0f)
     val yTicks = List(5) { index -> upperBound - (upperBound / 4f) * index }
     val axisColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)
 
@@ -605,7 +633,7 @@ fun TrendChart(
                     .height(220.dp),
             ) {
                 val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                val pointCount = safeData.size.coerceAtLeast(2)
+                val pointCount = data.size.coerceAtLeast(2)
                 val chartWidth = size.width
                 val chartHeight = size.height - 8.dp.toPx()
 
@@ -647,8 +675,8 @@ fun TrendChart(
                 val linePath = Path()
                 val fillPath = Path()
 
-                safeData.forEachIndexed { index, value ->
-                    val x = if (safeData.size == 1) 0f else chartWidth * index / (safeData.lastIndex).toFloat()
+                data.forEachIndexed { index, value ->
+                    val x = if (data.size == 1) 0f else chartWidth * index / data.lastIndex.toFloat()
                     val normalized = if (upperBound == 0f) 0f else value / upperBound
                     val y = chartHeight - (normalized * chartHeight)
                     if (index == 0) {

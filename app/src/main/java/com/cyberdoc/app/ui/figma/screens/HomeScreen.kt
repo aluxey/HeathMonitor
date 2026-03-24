@@ -47,7 +47,8 @@ fun HomeScreen(
     onOpenMetric: (String) -> Unit,
 ) {
     val stepsMetric = metrics.firstOrNull { it.id == "steps" }
-    val heartMetric = metrics.firstOrNull { it.id == "heart" }
+    val activityMetric = metrics.firstOrNull { it.id == "activity" }
+    val activityValue = activityMetric?.value?.takeIf { it.toFloatOrNull() != null }?.let { "$it min" } ?: "xx"
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -110,19 +111,15 @@ fun HomeScreen(
                         QuickStatCard(
                             metricId = "steps",
                             label = "Steps today",
-                            value = stepsMetric?.value ?: "--",
+                            value = stepsMetric?.value ?: "xx",
                             color = stepsMetric?.color ?: MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
                         QuickStatCard(
-                            metricId = "heart",
-                            label = "Avg heart rate",
-                            value = buildString {
-                                val value = heartMetric?.value ?: "--"
-                                append(value)
-                                if (value != "--") append(" bpm")
-                            },
-                            color = heartMetric?.color ?: MaterialTheme.colorScheme.primary,
+                            metricId = "activity",
+                            label = "Active minutes",
+                            value = activityValue,
+                            color = activityMetric?.color ?: MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
                     }

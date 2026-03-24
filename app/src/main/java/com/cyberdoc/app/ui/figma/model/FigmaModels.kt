@@ -51,24 +51,22 @@ private data class MetricPresentation(
     val id: String,
     val title: String,
     val color: Color,
-    val fallbackValue: String,
-    val fallbackGoal: Float?,
-    val fallbackWeekData: List<Float>,
-    val fallbackMonthData: List<Float>,
 )
 
 private val dashboardMetricOrder = listOf(
     MetricType.STEPS,
-    MetricType.HEART_RATE,
     MetricType.SLEEP_DURATION,
+    MetricType.EXERCISE_DURATION,
     MetricType.WEIGHT,
     MetricType.HYDRATION,
     MetricType.CALORIES_IN,
+    MetricType.HEART_RATE,
 )
 
 fun editableGoalMetricTypes(): List<MetricType> = listOf(
     MetricType.STEPS,
     MetricType.SLEEP_DURATION,
+    MetricType.EXERCISE_DURATION,
     MetricType.WEIGHT,
     MetricType.HYDRATION,
     MetricType.CALORIES_IN,
@@ -119,12 +117,11 @@ fun metricsData(): List<MetricUi> = dashboardMetricOrder.map(::defaultMetricUi)
 
 fun dashboardSnapshotToMetrics(snapshot: DashboardSnapshot?): List<MetricUi> {
     if (snapshot == null) return metricsData()
-    if (snapshot.metrics.isEmpty()) return emptyList()
 
     val snapshotByType = snapshot.metrics.associateBy { it.metricType }
-    return dashboardMetricOrder.mapNotNull { type ->
-        val metric = snapshotByType[type] ?: return@mapNotNull null
+    return dashboardMetricOrder.map { type ->
         val fallback = defaultMetricUi(type)
+        val metric = snapshotByType[type] ?: return@map fallback
 
         fallback.copy(
             value = formatMetricValue(type, metric.value),
@@ -165,19 +162,15 @@ private fun defaultMetricUi(metricType: MetricType): MetricUi {
     return MetricUi(
         id = presentation.id,
         title = presentation.title,
-        value = presentation.fallbackValue,
+        value = "xx",
         unit = metricDisplayUnit(metricType),
         trendLabel = null,
         trendUp = true,
-        source = if (metricType == MetricType.HYDRATION || metricType == MetricType.WEIGHT) {
-            "Manual"
-        } else {
-            "Synced"
-        },
+        source = "Pending",
         color = presentation.color,
-        goal = presentation.fallbackGoal,
-        weekData = presentation.fallbackWeekData,
-        monthData = presentation.fallbackMonthData,
+        goal = null,
+        weekData = emptyList(),
+        monthData = emptyList(),
     )
 }
 
@@ -187,70 +180,42 @@ private fun metricPresentation(metricType: MetricType): MetricPresentation =
             id = "steps",
             title = "Steps",
             color = Chart1,
-            fallbackValue = "8,547",
-            fallbackGoal = 10000f,
-            fallbackWeekData = listOf(7234f, 8912f, 9456f, 8123f, 10234f, 9876f, 8547f),
-            fallbackMonthData = listOf(7234f, 8456f, 9102f, 9754f, 8123f, 9340f, 10234f),
         )
 
         MetricType.HEART_RATE -> MetricPresentation(
             id = "heart",
             title = "Heart Rate",
             color = Chart4,
-            fallbackValue = "72",
-            fallbackGoal = null,
-            fallbackWeekData = listOf(74f, 73f, 75f, 71f, 72f, 70f, 72f),
-            fallbackMonthData = listOf(74f, 76f, 75f, 72f, 71f, 70f, 72f),
         )
 
         MetricType.SLEEP_DURATION -> MetricPresentation(
             id = "sleep",
             title = "Sleep",
             color = Chart5,
-            fallbackValue = "7.5",
-            fallbackGoal = 8f,
-            fallbackWeekData = listOf(7.2f, 6.8f, 7.5f, 8.1f, 7.0f, 8.5f, 7.5f),
-            fallbackMonthData = listOf(6.9f, 7.4f, 7.0f, 8.1f, 7.8f, 8.3f, 7.5f),
         )
 
         MetricType.WEIGHT -> MetricPresentation(
             id = "weight",
             title = "Weight",
             color = Chart2,
-            fallbackValue = "70.4",
-            fallbackGoal = 68f,
-            fallbackWeekData = listOf(71.2f, 71.0f, 70.9f, 70.8f, 70.6f, 70.5f, 70.4f),
-            fallbackMonthData = listOf(72.0f, 71.8f, 71.5f, 71.2f, 71.0f, 70.7f, 70.4f),
         )
 
         MetricType.HYDRATION -> MetricPresentation(
             id = "hydration",
             title = "Hydration",
             color = Chart3,
-            fallbackValue = "1.8",
-            fallbackGoal = 2.5f,
-            fallbackWeekData = listOf(2.1f, 1.9f, 2.3f, 1.7f, 2.0f, 2.4f, 1.8f),
-            fallbackMonthData = listOf(1.8f, 2.1f, 2.2f, 2.0f, 1.9f, 2.4f, 1.8f),
         )
 
         MetricType.CALORIES_IN -> MetricPresentation(
             id = "calories",
             title = "Calories",
             color = Chart4,
-            fallbackValue = "1820",
-            fallbackGoal = 2100f,
-            fallbackWeekData = listOf(1750f, 1890f, 1960f, 1810f, 2050f, 1920f, 1820f),
-            fallbackMonthData = listOf(1700f, 1840f, 1910f, 2000f, 1880f, 1940f, 1820f),
         )
 
         MetricType.EXERCISE_DURATION -> MetricPresentation(
             id = "activity",
             title = "Active Minutes",
             color = Chart2,
-            fallbackValue = "45",
-            fallbackGoal = 60f,
-            fallbackWeekData = listOf(35f, 42f, 50f, 38f, 55f, 60f, 45f),
-            fallbackMonthData = listOf(30f, 38f, 47f, 54f, 40f, 60f, 45f),
         )
     }
 

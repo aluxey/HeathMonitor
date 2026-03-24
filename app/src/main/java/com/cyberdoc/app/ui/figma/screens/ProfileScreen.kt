@@ -77,7 +77,7 @@ fun ProfileScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "JD",
+                                    text = "ME",
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
@@ -87,12 +87,12 @@ fun ProfileScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "John Doe",
+                                text = "This device",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = "Local account",
+                                text = "Local profile",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

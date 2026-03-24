@@ -14,6 +14,7 @@ class StubHealthConnectRepository(
         setOf(
             HealthDataType.STEPS,
             HealthDataType.SLEEP,
+            HealthDataType.EXERCISE,
             HealthDataType.WEIGHT,
             HealthDataType.HYDRATION,
             HealthDataType.CALORIES_IN,
@@ -50,6 +51,16 @@ class StubHealthConnectRepository(
                 endAt = now.minus(3, ChronoUnit.HOURS),
                 sourceAppId = "com.myfitnesspal.android",
                 sourceAppName = "Yazio",
+                externalId = UUID.randomUUID().toString(),
+            ),
+            HealthConnectRawRecord(
+                dataType = HealthDataType.EXERCISE,
+                value = 52.0,
+                unit = "minute",
+                startAt = now.minus(5, ChronoUnit.HOURS),
+                endAt = now.minus(4, ChronoUnit.HOURS).plus(52, ChronoUnit.MINUTES),
+                sourceAppId = "com.zepp.health",
+                sourceAppName = "Zepp",
                 externalId = UUID.randomUUID().toString(),
             ),
             HealthConnectRawRecord(

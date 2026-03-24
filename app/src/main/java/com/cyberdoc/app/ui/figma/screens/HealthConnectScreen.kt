@@ -72,6 +72,7 @@ fun HealthConnectScreen(
     val options = remember {
         listOf(
             PermissionOption(HealthDataType.STEPS, "Steps", "Daily step count"),
+            PermissionOption(HealthDataType.EXERCISE, "Activity", "Exercise sessions and active minutes"),
             PermissionOption(HealthDataType.HEART_RATE, "Heart Rate", "Heart rate measurements"),
             PermissionOption(HealthDataType.SLEEP, "Sleep", "Sleep duration and sessions"),
             PermissionOption(HealthDataType.WEIGHT, "Weight", "Body weight measurements"),
@@ -122,6 +123,7 @@ fun HealthConnectScreen(
                 selected.addAll(
                     listOf(
                         HealthDataType.STEPS,
+                        HealthDataType.EXERCISE,
                         HealthDataType.HEART_RATE,
                         HealthDataType.SLEEP,
                     ),
@@ -373,6 +375,7 @@ fun HealthConnectScreen(
 private fun PermissionIcon(type: HealthDataType) {
     val iconName = when (type) {
         HealthDataType.STEPS -> "steps"
+        HealthDataType.EXERCISE -> "activity"
         HealthDataType.HEART_RATE -> "heart"
         HealthDataType.SLEEP -> "sleep"
         HealthDataType.WEIGHT -> "weight"

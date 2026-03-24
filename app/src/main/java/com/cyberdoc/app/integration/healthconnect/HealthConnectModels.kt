@@ -11,6 +11,7 @@ enum class HealthConnectAvailability {
 enum class HealthDataType {
     STEPS,
     SLEEP,
+    EXERCISE,
     WEIGHT,
     HYDRATION,
     CALORIES_IN,

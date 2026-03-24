@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cyberdoc.app.app.di.AppGraph
 import com.cyberdoc.app.core.AppResult
 import com.cyberdoc.app.domain.model.Goal
@@ -77,9 +81,12 @@ fun FigmaDesignApp() {
     var trackedMetricCount by remember { mutableStateOf(0) }
     var manualEntryState by remember { mutableStateOf(ActionUiState()) }
     var goalState by remember { mutableStateOf(ActionUiState()) }
+    var initialLoadCompleted by remember { mutableStateOf(false) }
+    var syncInProgress by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val container = remember { AppGraph.container() }
     val sessionStore = remember { FigmaSessionStore(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
     val todayLabel = remember {
         LocalDate.now().format(
             DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()),
@@ -89,21 +96,32 @@ fun FigmaDesignApp() {
     suspend fun refreshAppState(syncHealthData: Boolean) {
         container.bootstrapMvpDataUseCase()
         if (syncHealthData) {
-            container.syncHealthConnectDataUseCase(daysBack = 7)
+            if (syncInProgress) return
+            syncInProgress = true
         }
 
-        val snapshot = runCatching { container.getDashboardSnapshotUseCase() }.getOrNull()
-        metrics = dashboardSnapshotToMetrics(snapshot)
-        goals = runCatching { goalProgressToUi(container.getGoalProgressUseCase()) }.getOrDefault(emptyList())
+        try {
+            if (syncHealthData) {
+                container.syncHealthConnectDataUseCase(daysBack = 30)
+            }
 
-        val sources = snapshot?.sources ?: runCatching { container.sourceRepository.all() }.getOrDefault(emptyList())
-        val healthSources = sources.filter { it.type == SourceType.HEALTH_CONNECT }
-        sourceCount = healthSources.size
-        connectedSourceCount = healthSources.count { it.status == SourceStatus.CONNECTED }
-        trackedMetricCount = snapshot?.metrics?.size ?: 0
-        lastSyncLabel = runCatching {
-            formatSyncSummary(container.syncRepository.latest(limit = 1).firstOrNull())
-        }.getOrNull()
+            val snapshot = runCatching { container.getDashboardSnapshotUseCase() }.getOrNull()
+            metrics = dashboardSnapshotToMetrics(snapshot)
+            goals = runCatching { goalProgressToUi(container.getGoalProgressUseCase()) }.getOrDefault(emptyList())
+
+            val sources = snapshot?.sources ?: runCatching { container.sourceRepository.all() }.getOrDefault(emptyList())
+            val healthSources = sources.filter { it.type == SourceType.HEALTH_CONNECT }
+            sourceCount = healthSources.size
+            connectedSourceCount = healthSources.count { it.status == SourceStatus.CONNECTED }
+            trackedMetricCount = snapshot?.metrics?.size ?: 0
+            lastSyncLabel = runCatching {
+                formatSyncSummary(container.syncRepository.latest(limit = 1).firstOrNull())
+            }.getOrNull()
+        } finally {
+            if (syncHealthData) {
+                syncInProgress = false
+            }
+        }
     }
 
     suspend fun goToBestNextStageAfterOnboarding() {
@@ -112,6 +130,7 @@ fun FigmaDesignApp() {
         if (rootStage == RootStage.APP) {
             refreshAppState(syncHealthData = true)
         }
+        initialLoadCompleted = true
     }
 
     suspend fun saveManualEntry(entry: ManualEntryDraft) {
@@ -193,6 +212,25 @@ fun FigmaDesignApp() {
         } else {
             refreshAppState(syncHealthData = false)
         }
+        initialLoadCompleted = true
+    }
+
+    DisposableEffect(lifecycleOwner, rootStage, initialLoadCompleted) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (
+                event == Lifecycle.Event.ON_RESUME &&
+                initialLoadCompleted &&
+                rootStage == RootStage.APP
+            ) {
+                scope.launch {
+                    refreshAppState(syncHealthData = true)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Scaffold(
@@ -240,12 +278,14 @@ fun FigmaDesignApp() {
                         onContinue = {
                             scope.launch {
                                 refreshAppState(syncHealthData = true)
+                                initialLoadCompleted = true
                                 rootStage = RootStage.APP
                             }
                         },
                         onSkip = {
                             scope.launch {
                                 refreshAppState(syncHealthData = false)
+                                initialLoadCompleted = true
                                 rootStage = RootStage.APP
                             }
                         },
@@ -294,7 +334,12 @@ fun FigmaDesignApp() {
                                         )
                                     }
 
-                                    Overlay.SUMMARY -> DailySummaryScreen(onBack = { overlay = Overlay.NONE })
+                                    Overlay.SUMMARY -> DailySummaryScreen(
+                                        metrics = metrics,
+                                        goals = goals,
+                                        lastSyncLabel = lastSyncLabel,
+                                        onBack = { overlay = Overlay.NONE },
+                                    )
                                     Overlay.MANUAL -> ManualEntryScreen(
                                         isSaving = manualEntryState.isSaving,
                                         saveMessage = manualEntryState.message,

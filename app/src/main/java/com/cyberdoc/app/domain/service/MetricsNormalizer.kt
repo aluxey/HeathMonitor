@@ -72,6 +72,7 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
         when (this) {
             HealthDataType.STEPS -> MetricType.STEPS
             HealthDataType.SLEEP -> MetricType.SLEEP_DURATION
+            HealthDataType.EXERCISE -> MetricType.EXERCISE_DURATION
             HealthDataType.WEIGHT -> MetricType.WEIGHT
             HealthDataType.HYDRATION -> MetricType.HYDRATION
             HealthDataType.CALORIES_IN -> MetricType.CALORIES_IN

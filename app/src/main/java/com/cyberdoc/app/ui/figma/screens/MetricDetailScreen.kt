@@ -39,13 +39,16 @@ import kotlin.math.roundToInt
 fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
     var period by remember { mutableStateOf(Period.WEEK) }
     val data = if (period == Period.WEEK) metric.weekData else metric.monthData
+    val hasHistory = data.isNotEmpty()
     val labels = if (period == Period.WEEK) {
         listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     } else {
         listOf("1", "5", "10", "15", "20", "25", "30").take(data.size)
     }
-    val currentValue = metric.value.toFloatOrNull() ?: 0f
-    val goalProgress = metric.goal?.let { (currentValue / it).coerceIn(0f, 1f) } ?: 0f
+    val currentValue = metric.value.toFloatOrNull()
+    val goalProgress = metric.goal?.let { goal ->
+        currentValue?.let { (it / goal).coerceIn(0f, 1f) }
+    } ?: 0f
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -127,7 +130,9 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Text(
-                                            text = "${(goalProgress * 100).roundToInt()}% complete",
+                                            text = currentValue?.let {
+                                                "${(goalProgress * 100).roundToInt()}% complete"
+                                            } ?: "No data yet",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium,
                                         )
@@ -173,30 +178,40 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                         )
-                        TrendChart(
-                            data = data,
-                            labels = labels,
-                            color = metric.color,
-                        )
+                        if (hasHistory) {
+                            TrendChart(
+                                data = data,
+                                labels = labels,
+                                color = metric.color,
+                            )
+                        } else {
+                            Text(
+                                text = "No history available yet for this metric.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    StatValueCard(
-                        label = "Average",
-                        value = formatStatValue(data.average()),
-                        unit = metric.unit,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatValueCard(
-                        label = "Best day",
-                        value = formatStatValue((data.maxOrNull() ?: 0f).toDouble()),
-                        unit = metric.unit,
-                        modifier = Modifier.weight(1f),
-                    )
+                if (hasHistory) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        StatValueCard(
+                            label = "Average",
+                            value = formatStatValue(data.average()),
+                            unit = metric.unit,
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatValueCard(
+                            label = "Best day",
+                            value = formatStatValue((data.maxOrNull() ?: 0f).toDouble()),
+                            unit = metric.unit,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
