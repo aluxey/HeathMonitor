@@ -36,7 +36,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.HelpOutline
-import androidx.compose.material.icons.rounded.HomeRounded
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.DarkMode
@@ -101,7 +101,7 @@ fun BottomNav(tab: AppTab?, onTab: (AppTab) -> Unit) {
         ) {
             NavItem(
                 label = "Home",
-                icon = Icons.Rounded.HomeRounded,
+                icon = Icons.Rounded.Home,
                 selected = tab == AppTab.HOME,
             ) { onTab(AppTab.HOME) }
             NavItem(
