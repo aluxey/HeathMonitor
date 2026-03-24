@@ -29,7 +29,12 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
                 startAt = raw.startAt,
                 endAt = raw.endAt,
                 sourceId = sourceId,
-                externalId = raw.externalId,
+                externalId = raw.externalId ?: fallbackExternalId(
+                    raw = raw,
+                    metricType = metricType,
+                    normalizedValue = normalizedValue,
+                    normalizedUnit = normalizedUnit,
+                ),
                 isManual = false,
                 createdAt = importedAt,
             )
@@ -67,6 +72,22 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
 
             else -> value
         }
+
+    private fun fallbackExternalId(
+        raw: HealthConnectRawRecord,
+        metricType: MetricType,
+        normalizedValue: Double,
+        normalizedUnit: String,
+    ): String =
+        listOf(
+            "health-connect",
+            metricType.name,
+            raw.sourceAppId ?: raw.sourceAppName ?: "unknown",
+            raw.startAt.toEpochMilli().toString(),
+            raw.endAt.toEpochMilli().toString(),
+            normalizedValue.toString(),
+            normalizedUnit,
+        ).joinToString(separator = ":")
 
     private fun HealthDataType.toMetricType(): MetricType? =
         when (this) {

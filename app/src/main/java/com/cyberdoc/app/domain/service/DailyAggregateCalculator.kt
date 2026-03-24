@@ -5,14 +5,17 @@ import com.cyberdoc.app.domain.model.MetricRecord
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.model.QualityFlag
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.util.UUID
 
 class DailyAggregateCalculator {
+    private val zoneId: ZoneId = ZoneId.systemDefault()
+
     fun calculate(records: List<MetricRecord>, computedAt: Instant): List<DailyAggregate> =
         records
+            .distinctBy(::aggregateRecordKey)
             .groupBy { record ->
-                Pair(record.startAt.atZone(ZoneOffset.UTC).toLocalDate(), record.metricType)
+                Pair(record.startAt.atZone(zoneId).toLocalDate(), record.metricType)
             }
             .map { (key, grouped) ->
                 val date = key.first
@@ -39,4 +42,14 @@ class DailyAggregateCalculator {
                     computedAt = computedAt,
                 )
             }
+
+    private fun aggregateRecordKey(record: MetricRecord): String =
+        record.externalId ?: listOf(
+            record.metricType.name,
+            record.startAt.toEpochMilli().toString(),
+            record.endAt.toEpochMilli().toString(),
+            record.value.toString(),
+            record.unit,
+            record.sourceId,
+        ).joinToString(separator = ":")
 }

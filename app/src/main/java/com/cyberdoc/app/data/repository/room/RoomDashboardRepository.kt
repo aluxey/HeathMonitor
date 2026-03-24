@@ -11,7 +11,7 @@ import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.repository.DashboardRepository
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 import kotlin.math.abs
 
 class RoomDashboardRepository(
@@ -21,21 +21,42 @@ class RoomDashboardRepository(
     private val sourceDao: DataSourceDao,
     private val timeProvider: TimeProvider,
 ) : DashboardRepository {
+    private val zoneId: ZoneId = ZoneId.systemDefault()
+    private val dailyMetricTypes = setOf(
+        MetricType.STEPS,
+        MetricType.EXERCISE_DURATION,
+        MetricType.HYDRATION,
+        MetricType.CALORIES_IN,
+    )
+
     override suspend fun snapshot(): DashboardSnapshot {
+        val today = timeProvider.now().atZone(zoneId).toLocalDate()
+        val todayAggregates = aggregateDao.byDate(today.toString()).associateBy { it.metricType }
         val metrics = MetricType.entries.mapNotNull { metricType ->
             val latestAggregate = aggregateDao.latest(metricType.name)
             val latest = metricDao.latest(metricType.name) ?: return@mapNotNull null
             val goal = goalDao.activeGoal(metricType.name)
-            val anchorDate = latestAggregate?.let { LocalDate.parse(it.date) }
-                ?: Instant.ofEpochMilli(latest.endAtEpochMillis).atZone(ZoneOffset.UTC).toLocalDate()
-            val weekValues = latestAggregate?.let {
+            val displayAggregate = if (metricType in dailyMetricTypes) {
+                todayAggregates[metricType.name]
+            } else {
+                latestAggregate
+            }
+
+            if (metricType in dailyMetricTypes && displayAggregate == null) {
+                return@mapNotNull null
+            }
+
+            val anchorDate = displayAggregate?.let { LocalDate.parse(it.date) }
+                ?: latestAggregate?.let { LocalDate.parse(it.date) }
+                ?: Instant.ofEpochMilli(latest.endAtEpochMillis).atZone(zoneId).toLocalDate()
+            val weekValues = (displayAggregate ?: latestAggregate)?.let {
                 denseSeries(
                     metricType = metricType,
                     fromDate = anchorDate.minusDays(6),
                     toDate = anchorDate,
                 )
             } ?: fallbackSeries(days = 7, latestValue = latest.value)
-            val monthValues = latestAggregate?.let {
+            val monthValues = (displayAggregate ?: latestAggregate)?.let {
                 denseSeries(
                     metricType = metricType,
                     fromDate = anchorDate.minusDays(29),
@@ -44,11 +65,11 @@ class RoomDashboardRepository(
             } ?: fallbackSeries(days = 30, latestValue = latest.value)
             DashboardMetric(
                 metricType = metricType,
-                value = latestAggregate?.value ?: latest.value,
-                unit = latestAggregate?.unit ?: latest.unit,
+                value = displayAggregate?.value ?: latestAggregate?.value ?: latest.value,
+                unit = displayAggregate?.unit ?: latestAggregate?.unit ?: latest.unit,
                 trendPercent = calculateTrendPercent(weekValues),
                 goalTarget = goal?.targetValue,
-                sourceId = latestAggregate?.sourceId ?: latest.sourceId,
+                sourceId = displayAggregate?.sourceId ?: latestAggregate?.sourceId ?: latest.sourceId,
                 weekValues = weekValues,
                 monthValues = monthValues,
             )

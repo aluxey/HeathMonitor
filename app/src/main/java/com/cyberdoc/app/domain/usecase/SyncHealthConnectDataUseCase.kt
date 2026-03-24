@@ -17,7 +17,7 @@ import com.cyberdoc.app.domain.service.DailyAggregateCalculator
 import com.cyberdoc.app.domain.service.MetricsNormalizer
 import com.cyberdoc.app.integration.healthconnect.HealthConnectAvailability
 import com.cyberdoc.app.integration.healthconnect.HealthConnectRepository
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -60,7 +60,7 @@ class SyncHealthConnectDataUseCase(
             metricRepository.upsertAll(normalized)
 
             val impactedDays = normalized
-                .map { it.startAt.atZone(ZoneOffset.UTC).toLocalDate() }
+                .map { it.startAt.atZone(ZoneId.systemDefault()).toLocalDate() }
                 .distinct()
             val aggregates = impactedDays.flatMap { day ->
                 aggregateCalculator.calculate(

@@ -5,11 +5,13 @@ import com.cyberdoc.app.domain.model.MetricRecord
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.repository.MetricRepository
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 class RoomMetricRepository(
     private val dao: MetricRecordDao,
 ) : MetricRepository {
+    private val zoneId: ZoneId = ZoneId.systemDefault()
+
     override suspend fun add(record: MetricRecord) {
         dao.upsert(record.toEntity())
     }
@@ -20,8 +22,8 @@ class RoomMetricRepository(
     }
 
     override suspend fun findByDay(day: LocalDate): List<MetricRecord> {
-        val from = day.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-        val to = day.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+        val from = day.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val to = day.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
         return dao.byDay(fromEpochMillis = from, toEpochMillis = to).map { it.toDomain() }
     }
 
