@@ -1,13 +1,16 @@
 package com.cyberdoc.app.ui.figma.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,93 +24,192 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.cyberdoc.app.ui.figma.components.PeriodChip
+import com.cyberdoc.app.ui.figma.components.SegmentedControl
 import com.cyberdoc.app.ui.figma.components.SmallBackChip
 import com.cyberdoc.app.ui.figma.components.StatValueCard
+import com.cyberdoc.app.ui.figma.components.StatusBadge
 import com.cyberdoc.app.ui.figma.components.TrendChart
+import com.cyberdoc.app.ui.figma.components.TrendLabel
 import com.cyberdoc.app.ui.figma.model.MetricUi
 import com.cyberdoc.app.ui.figma.navigation.Period
-import com.cyberdoc.app.ui.theme.Chart2
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
     var period by remember { mutableStateOf(Period.WEEK) }
     val data = if (period == Period.WEEK) metric.weekData else metric.monthData
-    val goalProgress = metric.goal?.let { (metric.value.toFloatOrNull() ?: 0f) / it }?.coerceIn(0f, 1f) ?: 0f
+    val labels = if (period == Period.WEEK) {
+        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    } else {
+        listOf("1", "5", "10", "15", "20", "25", "30").take(data.size)
+    }
+    val currentValue = metric.value.toFloatOrNull() ?: 0f
+    val goalProgress = metric.goal?.let { (currentValue / it).coerceIn(0f, 1f) } ?: 0f
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SmallBackChip(onClick = onBack)
-                Text(metric.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            }
-        }
-
-        item {
-            Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                androidx.compose.foundation.layout.Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Current", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(metric.value, style = MaterialTheme.typography.displaySmall, color = metric.color, fontWeight = FontWeight.Bold)
-                        Text(metric.unit, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    metric.trendLabel?.let {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp,
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        SmallBackChip(onClick = onBack)
                         Text(
-                            it + " vs last week",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (metric.trendUp) Chart2 else MaterialTheme.colorScheme.error,
+                            text = metric.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
-                    if (metric.goal != null) {
-                        LinearProgressIndicator(
-                            progress = { goalProgress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = "Current",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.Bottom,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Text(
+                                            text = metric.value,
+                                            style = MaterialTheme.typography.displaySmall,
+                                            color = metric.color,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Text(
+                                            text = metric.unit,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                StatusBadge(source = metric.source)
+                            }
+
+                            metric.trendLabel?.let {
+                                TrendLabel(label = it, trendUp = metric.trendUp)
+                            }
+
+                            metric.goal?.let { goal ->
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = "Daily goal",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Text(
+                                            text = "${(goalProgress * 100).roundToInt()}% complete",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                    }
+                                    LinearProgressIndicator(
+                                        progress = { goalProgress },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp),
+                                        color = metric.color,
+                                        trackColor = MaterialTheme.colorScheme.surface,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                SegmentedControl(
+                    selectedIndex = if (period == Period.WEEK) 0 else 1,
+                    labels = listOf("Week", "Month"),
+                    onSelect = { period = if (it == 0) Period.WEEK else Period.MONTH },
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = if (period == Period.WEEK) "Last 7 days" else "Last 30 days",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        TrendChart(
+                            data = data,
+                            labels = labels,
                             color = metric.color,
-                            trackColor = MaterialTheme.colorScheme.surface,
                         )
                     }
                 }
-            }
-        }
 
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PeriodChip("Week", selected = period == Period.WEEK) { period = Period.WEEK }
-                PeriodChip("Month", selected = period == Period.MONTH) { period = Period.MONTH }
-            }
-        }
-
-        item {
-            Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
-                androidx.compose.foundation.layout.Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(if (period == Period.WEEK) "Last 7 days" else "Last 30 days", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                    TrendChart(data = data, color = metric.color)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    StatValueCard(
+                        label = "Average",
+                        value = formatStatValue(data.average()),
+                        unit = metric.unit,
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatValueCard(
+                        label = "Best day",
+                        value = formatStatValue((data.maxOrNull() ?: 0f).toDouble()),
+                        unit = metric.unit,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatValueCard(
-                    label = "Average",
-                    value = String.format(Locale.US, "%.1f", data.sum() / data.size),
-                    unit = metric.unit,
-                    modifier = Modifier.weight(1f),
-                )
-                StatValueCard(
-                    label = "Best",
-                    value = data.maxOrNull()?.let { String.format(Locale.US, "%.1f", it) } ?: "-",
-                    unit = metric.unit,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            Spacer(modifier = Modifier.height(18.dp))
         }
     }
 }
+
+private fun formatStatValue(value: Double): String =
+    if (value % 1.0 == 0.0) {
+        value.roundToInt().toString()
+    } else {
+        String.format(Locale.US, "%.1f", value)
+    }

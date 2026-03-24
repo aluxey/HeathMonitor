@@ -185,8 +185,14 @@ fun FigmaDesignApp() {
                                 }
                             }
 
-                            if (overlay == Overlay.NONE) {
-                                BottomNav(tab = appTab, onTab = { appTab = it })
+                            if (overlay != Overlay.MANUAL) {
+                                BottomNav(
+                                    tab = if (overlay == Overlay.NONE) appTab else null,
+                                    onTab = {
+                                        overlay = Overlay.NONE
+                                        appTab = it
+                                    },
+                                )
                             }
                         }
                     }
