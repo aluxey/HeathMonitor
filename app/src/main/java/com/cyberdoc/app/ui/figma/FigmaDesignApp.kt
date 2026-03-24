@@ -21,8 +21,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.cyberdoc.app.app.di.AppGraph
+import com.cyberdoc.app.core.AppResult
+import com.cyberdoc.app.domain.model.Goal
+import com.cyberdoc.app.domain.model.MetricRecord
+import com.cyberdoc.app.domain.model.PeriodType
+import com.cyberdoc.app.domain.model.SourceStatus
+import com.cyberdoc.app.domain.model.SourceType
+import com.cyberdoc.app.domain.model.SyncRun
 import com.cyberdoc.app.ui.figma.components.BottomNav
+import com.cyberdoc.app.ui.figma.model.GoalDraft
+import com.cyberdoc.app.ui.figma.model.GoalUi
+import com.cyberdoc.app.ui.figma.model.ManualEntryDraft
 import com.cyberdoc.app.ui.figma.model.dashboardSnapshotToMetrics
+import com.cyberdoc.app.ui.figma.model.goalProgressToUi
+import com.cyberdoc.app.ui.figma.model.metricInputToRawValue
+import com.cyberdoc.app.ui.figma.model.metricStorageUnit
 import com.cyberdoc.app.ui.figma.model.metricsData
 import com.cyberdoc.app.ui.figma.navigation.AppTab
 import com.cyberdoc.app.ui.figma.navigation.Overlay
@@ -35,10 +48,19 @@ import com.cyberdoc.app.ui.figma.screens.ManualEntryScreen
 import com.cyberdoc.app.ui.figma.screens.MetricDetailScreen
 import com.cyberdoc.app.ui.figma.screens.OnboardingScreen
 import com.cyberdoc.app.ui.figma.screens.ProfileScreen
-import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.launch
+
+private data class ActionUiState(
+    val isSaving: Boolean = false,
+    val message: String? = null,
+    val error: String? = null,
+)
 
 @Composable
 fun FigmaDesignApp() {
@@ -48,6 +70,13 @@ fun FigmaDesignApp() {
     var overlay by remember { mutableStateOf(Overlay.NONE) }
     var selectedMetricId by remember { mutableStateOf("steps") }
     var metrics by remember { mutableStateOf(metricsData()) }
+    var goals by remember { mutableStateOf<List<GoalUi>>(emptyList()) }
+    var lastSyncLabel by remember { mutableStateOf<String?>(null) }
+    var sourceCount by remember { mutableStateOf(0) }
+    var connectedSourceCount by remember { mutableStateOf(0) }
+    var trackedMetricCount by remember { mutableStateOf(0) }
+    var manualEntryState by remember { mutableStateOf(ActionUiState()) }
+    var goalState by remember { mutableStateOf(ActionUiState()) }
     val scope = rememberCoroutineScope()
     val container = remember { AppGraph.container() }
     val sessionStore = remember { FigmaSessionStore(context) }
@@ -57,17 +86,88 @@ fun FigmaDesignApp() {
         )
     }
 
-    suspend fun refreshDashboard() {
-        container.syncHealthConnectDataUseCase(daysBack = 7)
+    suspend fun refreshAppState(syncHealthData: Boolean) {
+        container.bootstrapMvpDataUseCase()
+        if (syncHealthData) {
+            container.syncHealthConnectDataUseCase(daysBack = 7)
+        }
+
         val snapshot = runCatching { container.getDashboardSnapshotUseCase() }.getOrNull()
         metrics = dashboardSnapshotToMetrics(snapshot)
+        goals = runCatching { goalProgressToUi(container.getGoalProgressUseCase()) }.getOrDefault(emptyList())
+
+        val sources = snapshot?.sources ?: runCatching { container.sourceRepository.all() }.getOrDefault(emptyList())
+        val healthSources = sources.filter { it.type == SourceType.HEALTH_CONNECT }
+        sourceCount = healthSources.size
+        connectedSourceCount = healthSources.count { it.status == SourceStatus.CONNECTED }
+        trackedMetricCount = snapshot?.metrics?.size ?: 0
+        lastSyncLabel = runCatching {
+            formatSyncSummary(container.syncRepository.latest(limit = 1).firstOrNull())
+        }.getOrNull()
     }
 
     suspend fun goToBestNextStageAfterOnboarding() {
         val granted = runCatching { container.healthConnectRepository.grantedDataTypes() }.getOrDefault(emptySet())
         rootStage = if (granted.isNotEmpty()) RootStage.APP else RootStage.HEALTH_CONNECT
         if (rootStage == RootStage.APP) {
-            refreshDashboard()
+            refreshAppState(syncHealthData = true)
+        }
+    }
+
+    suspend fun saveManualEntry(entry: ManualEntryDraft) {
+        manualEntryState = ActionUiState(isSaving = true)
+        val now = Instant.now()
+        val result = container.registerManualMetricUseCase(
+            MetricRecord(
+                id = UUID.randomUUID().toString(),
+                metricType = entry.metricType,
+                value = metricInputToRawValue(entry.metricType, entry.value),
+                unit = metricStorageUnit(entry.metricType),
+                startAt = now,
+                endAt = now,
+                sourceId = "manual",
+                externalId = null,
+                isManual = true,
+                createdAt = now,
+            ),
+        )
+
+        when (result) {
+            is AppResult.Success -> {
+                refreshAppState(syncHealthData = false)
+                manualEntryState = ActionUiState(message = "Entry saved successfully")
+            }
+
+            is AppResult.Failure -> {
+                manualEntryState = ActionUiState(error = result.error.message)
+            }
+        }
+    }
+
+    suspend fun saveGoal(goalDraft: GoalDraft) {
+        goalState = ActionUiState(isSaving = true)
+        val existingGoal = goals.firstOrNull { it.metricType == goalDraft.metricType }
+        val result = container.upsertGoalUseCase(
+            Goal(
+                id = existingGoal?.id ?: "goal_${goalDraft.metricType.name.lowercase(Locale.US)}",
+                metricType = goalDraft.metricType,
+                targetValue = metricInputToRawValue(goalDraft.metricType, goalDraft.targetValue),
+                periodType = PeriodType.DAILY,
+                startDate = LocalDate.now(),
+                endDate = null,
+                isActive = true,
+            ),
+        )
+
+        when (result) {
+            is AppResult.Success -> {
+                refreshAppState(syncHealthData = false)
+                goalState = ActionUiState(message = "Goal saved successfully")
+            }
+
+            is AppResult.Failure -> {
+                goalState = ActionUiState(error = result.error.message)
+            }
         }
     }
 
@@ -78,7 +178,7 @@ fun FigmaDesignApp() {
         if (!onboardingDone && grantedAtBoot.isNotEmpty()) {
             sessionStore.setOnboardingDone(true)
             rootStage = RootStage.APP
-            refreshDashboard()
+            refreshAppState(syncHealthData = true)
             return@LaunchedEffect
         }
 
@@ -89,7 +189,9 @@ fun FigmaDesignApp() {
 
         rootStage = if (grantedAtBoot.isNotEmpty()) RootStage.APP else RootStage.HEALTH_CONNECT
         if (rootStage == RootStage.APP) {
-            refreshDashboard()
+            refreshAppState(syncHealthData = true)
+        } else {
+            refreshAppState(syncHealthData = false)
         }
     }
 
@@ -137,13 +239,13 @@ fun FigmaDesignApp() {
                     RootStage.HEALTH_CONNECT -> HealthConnectScreen(
                         onContinue = {
                             scope.launch {
-                                refreshDashboard()
+                                refreshAppState(syncHealthData = true)
                                 rootStage = RootStage.APP
                             }
                         },
                         onSkip = {
                             scope.launch {
-                                refreshDashboard()
+                                refreshAppState(syncHealthData = false)
                                 rootStage = RootStage.APP
                             }
                         },
@@ -157,8 +259,12 @@ fun FigmaDesignApp() {
                                         AppTab.HOME -> HomeScreen(
                                             metrics = metrics,
                                             todayLabel = todayLabel,
+                                            lastSyncLabel = lastSyncLabel,
                                             onOpenSummary = { overlay = Overlay.SUMMARY },
-                                            onOpenManual = { overlay = Overlay.MANUAL },
+                                            onOpenManual = {
+                                                manualEntryState = ActionUiState()
+                                                overlay = Overlay.MANUAL
+                                            },
                                             onOpenGoals = { appTab = AppTab.GOALS },
                                             onOpenHealthConnect = { rootStage = RootStage.HEALTH_CONNECT },
                                             onOpenMetric = {
@@ -167,15 +273,41 @@ fun FigmaDesignApp() {
                                             },
                                         )
 
-                                        AppTab.GOALS -> GoalsScreen()
+                                        AppTab.GOALS -> GoalsScreen(
+                                            goals = goals,
+                                            isSaving = goalState.isSaving,
+                                            feedbackMessage = goalState.message,
+                                            errorMessage = goalState.error,
+                                            onSaveGoal = { goalDraft ->
+                                                scope.launch { saveGoal(goalDraft) }
+                                            },
+                                        )
+
                                         AppTab.PROFILE -> ProfileScreen(
+                                            connectedSourceCount = connectedSourceCount,
+                                            sourceCount = sourceCount,
+                                            trackedMetricCount = trackedMetricCount,
+                                            goalCount = goals.size,
+                                            lastSyncLabel = lastSyncLabel,
                                             onOpenGoals = { appTab = AppTab.GOALS },
                                             onOpenHealthConnect = { rootStage = RootStage.HEALTH_CONNECT },
                                         )
                                     }
 
                                     Overlay.SUMMARY -> DailySummaryScreen(onBack = { overlay = Overlay.NONE })
-                                    Overlay.MANUAL -> ManualEntryScreen(onBack = { overlay = Overlay.NONE })
+                                    Overlay.MANUAL -> ManualEntryScreen(
+                                        isSaving = manualEntryState.isSaving,
+                                        saveMessage = manualEntryState.message,
+                                        saveError = manualEntryState.error,
+                                        onSave = { draft ->
+                                            scope.launch { saveManualEntry(draft) }
+                                        },
+                                        onBack = {
+                                            manualEntryState = ActionUiState()
+                                            overlay = Overlay.NONE
+                                        },
+                                    )
+
                                     Overlay.METRIC -> MetricDetailScreen(
                                         metric = metrics.firstOrNull { it.id == selectedMetricId }
                                             ?: metrics.firstOrNull()
@@ -200,4 +332,12 @@ fun FigmaDesignApp() {
             }
         }
     }
+}
+
+private fun formatSyncSummary(run: SyncRun?): String? {
+    if (run == null) return null
+
+    val localTime = run.endedAt.atZone(ZoneId.systemDefault())
+    val timeLabel = localTime.format(DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault()))
+    return "${run.status.name.lowercase(Locale.US).replaceFirstChar { it.titlecase(Locale.US) }} on $timeLabel"
 }

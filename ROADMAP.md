@@ -10,6 +10,13 @@ CyberDoc doit rester un MVP Android natif, local-first, centre sur `Health Conne
 
 Le MVP ne doit pas deriver vers un backend serveur, un hub multi-plateforme ou une promesse d'analyse medicale.
 
+## Etat d'avancement au 2026-03-25
+
+- Phase 1 reste bloquee par la configuration du SDK Android local et la verification sur appareil
+- Phase 2 est bien engagee: le dashboard principal lit maintenant les agregats journaliers locaux
+- Phase 3 est bien engagee: la saisie manuelle et les objectifs sont maintenant relies au backend local
+- Phase 4 et Phase 5 restent a lancer apres validation de l'application sur appareil
+
 ## Phase 1 - Validation reelle sur appareil
 
 Objectif:
@@ -32,11 +39,11 @@ Fermer completement le flux `Health Connect -> Room -> agregats -> dashboard`.
 
 Livrables:
 
-- sync reelle fiable
-- dernier sync et statut visibles
-- tendances `7 jours` et `30 jours`
-- gestion des donnees vides ou partielles
-- suppression du maximum de donnees demo dans les ecrans principaux
+- [ ] sync reelle fiable sur appareil
+- [x] dernier sync et statut visibles dans l'application
+- [x] tendances `7 jours` et `30 jours`
+- [ ] gestion complete des donnees vides ou partielles
+- [x] suppression du maximum de donnees demo dans les ecrans principaux
 
 ## Phase 3 - Flux utilisateur MVP complets
 
@@ -46,10 +53,10 @@ Rendre les fonctions visibles dans l'UI vraiment utilisables.
 
 Livrables:
 
-- saisie manuelle branchee au backend local
-- objectifs modifiables dans l'application
-- ecran profil aligne avec le scope reel
-- navigation onboarding / permissions / app stable
+- [x] saisie manuelle branchee au backend local
+- [x] objectifs modifiables dans l'application
+- [x] ecran profil aligne avec le scope reel principal
+- [ ] navigation onboarding / permissions / app stable sur tous les cas reels
 
 ## Phase 4 - Stabilisation technique
 

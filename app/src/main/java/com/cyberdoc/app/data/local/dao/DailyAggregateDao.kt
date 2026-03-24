@@ -10,6 +10,12 @@ interface DailyAggregateDao {
     @Upsert
     suspend fun upsertAll(entities: List<DailyAggregateEntity>)
 
+    @Query(
+        "SELECT * FROM daily_aggregate " +
+            "WHERE metricType = :metricType ORDER BY date DESC, computedAtEpochMillis DESC LIMIT 1",
+    )
+    suspend fun latest(metricType: String): DailyAggregateEntity?
+
     @Query("SELECT * FROM daily_aggregate WHERE date = :date")
     suspend fun byDate(date: String): List<DailyAggregateEntity>
 

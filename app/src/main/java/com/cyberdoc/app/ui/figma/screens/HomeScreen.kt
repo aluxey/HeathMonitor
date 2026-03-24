@@ -39,6 +39,7 @@ import com.cyberdoc.app.ui.figma.model.MetricUi
 fun HomeScreen(
     metrics: List<MetricUi>,
     todayLabel: String,
+    lastSyncLabel: String?,
     onOpenSummary: () -> Unit,
     onOpenManual: () -> Unit,
     onOpenGoals: () -> Unit,
@@ -72,6 +73,11 @@ fun HomeScreen(
                             Text(
                                 text = todayLabel,
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = lastSyncLabel ?: "No sync yet",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -189,7 +195,7 @@ fun HomeScreen(
                     )
                     QuickActionTile(
                         title = "Health Connect",
-                        subtitle = "Manage sync",
+                        subtitle = lastSyncLabel ?: "Manage sync",
                         icon = Icons.Rounded.CloudDownload,
                         modifier = Modifier.weight(1f),
                         onClick = onOpenHealthConnect,

@@ -13,8 +13,14 @@ Le projet vise un MVP Android natif, local-first, base sur `Health Connect`, `Ro
 - [x] Repositories `Health Connect -> normalisation -> persistance -> agregats` deja presents
 - [x] Ecrans principaux deja maquettes et navigables
 - [x] Synchronisation Health Connect deja implemente en backend local
+- [x] Dashboard principal branche sur les agregats journaliers locaux
+- [x] Tendances `7 jours` et `30 jours` exposees au dashboard principal
+- [x] Saisie manuelle `weight` / `hydration` / `calories_in` branchee au backend local
+- [x] Objectifs modifiables depuis l'UI
+- [x] Ecrans `Home`, `Goals` et `Profile` relies aux donnees locales principales
+- [x] Double synchro implicite retiree du demarrage
 - [ ] Build/test local non verifiable ici tant que le SDK Android n'est pas configure
-- [ ] Plusieurs ecrans UI sont encore relies a des donnees statiques ou a des comportements factices
+- [ ] Des ecrans secondaires restent encore relies a des donnees statiques ou a des comportements factices
 
 ## Priorite 0 - Debloquer l'environnement et figer le perimetre MVP
 
@@ -38,32 +44,32 @@ Le projet vise un MVP Android natif, local-first, base sur `Health Connect`, `Ro
   - trous de donnees
   - unites
   - provenance
-- [ ] Afficher dans l'application le dernier sync, le statut du sync et les erreurs partielles
-- [ ] Utiliser les agregats journaliers comme base du dashboard au lieu de seulement lire la derniere mesure
-- [ ] Calculer et exposer les tendances `7 jours` et `30 jours`
+- [x] Afficher dans l'application le dernier sync et le statut du sync
+- [ ] Afficher dans l'application les erreurs partielles de sync
+- [x] Utiliser les agregats journaliers comme base du dashboard au lieu de seulement lire la derniere mesure
+- [x] Calculer et exposer les tendances `7 jours` et `30 jours`
 - [ ] Expliquer clairement dans l'UI pourquoi une metrique est vide ou partielle
 
 ## Priorite 2 - Supprimer les ecarts entre UI, domaine et donnees
 
-- [ ] Retirer les donnees de fallback purement demo quand les donnees reelles sont disponibles
+- [ ] Retirer les donnees de fallback purement demo restantes:
+  - [ ] `DailySummaryScreen`
+  - [ ] autres ecrans secondaires encore purement maquettes
 - [ ] Supprimer le bootstrap temporaire au demarrage une fois les vrais etats vides geres proprement
-- [ ] Aligner la liste des metriques UI avec le domaine:
-  - l'ecran de saisie manuelle propose aujourd'hui `height` et `temperature`, qui ne sont pas supportes par le domaine
-  - les ecrans objectifs/profil affichent encore des valeurs statiques
-- [ ] Brancher l'ecran Home sur un read model reel complet
-- [ ] Brancher l'ecran Goals sur les objectifs stockes en base
-- [ ] Brancher l'ecran Profile sur de vraies donnees locales ou le reduire au scope MVP reel
-- [ ] Eviter la double synchro implicite au lancement et centraliser la logique de refresh
+- [x] Aligner la liste des metriques UI avec le domaine pour la saisie manuelle
+- [x] Brancher l'ecran Home sur un read model reel complet
+- [x] Brancher l'ecran Goals sur les objectifs stockes en base
+- [x] Brancher l'ecran Profile sur de vraies donnees locales ou le reduire au scope MVP reel
+- [x] Eviter la double synchro implicite au lancement et centraliser la logique de refresh
 
 ## Priorite 3 - Finaliser les flux utilisateur MVP
 
-- [ ] Rendre la saisie manuelle fonctionnelle pour les metriques retenues
-- [ ] Apres saisie manuelle:
-  - enregistrer la mesure via le use case
-  - recalculer les agregats
-  - rafraichir le dashboard
-  - afficher un vrai message de succes ou d'erreur
-- [ ] Permettre la creation et la modification d'objectifs depuis l'UI
+- [x] Rendre la saisie manuelle fonctionnelle pour les metriques retenues
+- [x] Enregistrer la mesure manuelle via le use case
+- [x] Recalculer les agregats apres saisie manuelle
+- [x] Rafraichir le dashboard apres saisie manuelle
+- [x] Afficher un vrai message de succes ou d'erreur apres saisie manuelle
+- [x] Permettre la creation et la modification d'objectifs depuis l'UI
 - [ ] Ajouter les etats `loading`, `empty`, `partial`, `error` sur tous les ecrans critiques
 - [ ] Rendre la navigation onboarding -> permissions -> app robuste sur tous les cas:
   - Health Connect absent
@@ -100,6 +106,7 @@ Le projet vise un MVP Android natif, local-first, base sur `Health Connect`, `Ro
 ## Priorite 6 - Base de livraison propre
 
 - [ ] Remplacer `fallbackToDestructiveMigration` par de vraies migrations versionnees
+  - [x] version DB incrementee pour refleter l'evolution du schema courant
 - [ ] Documenter le setup local Android dans un README racine
 - [ ] Documenter le flux MVP:
   - onboarding

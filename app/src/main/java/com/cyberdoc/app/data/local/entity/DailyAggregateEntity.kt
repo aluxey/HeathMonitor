@@ -7,8 +7,7 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "daily_aggregate",
     indices = [
-        Index(value = ["date", "metricType"]),
-        Index(value = ["date", "metricType", "sourceId"], unique = true),
+        Index(value = ["date", "metricType"], unique = true),
     ],
 )
 data class DailyAggregateEntity(

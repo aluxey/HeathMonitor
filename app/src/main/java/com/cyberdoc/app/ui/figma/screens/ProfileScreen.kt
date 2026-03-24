@@ -34,6 +34,11 @@ import com.cyberdoc.app.ui.figma.components.profileIcon
 
 @Composable
 fun ProfileScreen(
+    connectedSourceCount: Int,
+    sourceCount: Int,
+    trackedMetricCount: Int,
+    goalCount: Int,
+    lastSyncLabel: String?,
     onOpenGoals: () -> Unit,
     onOpenHealthConnect: () -> Unit,
 ) {
@@ -112,9 +117,9 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .padding(vertical = 18.dp),
                     ) {
-                        SummaryStat(label = "Avg Score", value = "87", modifier = Modifier.weight(1f))
-                        SummaryStat(label = "Days Active", value = "23", modifier = Modifier.weight(1f))
-                        SummaryStat(label = "Goals Met", value = "12", modifier = Modifier.weight(1f))
+                        SummaryStat(label = "Sources", value = "$connectedSourceCount", modifier = Modifier.weight(1f))
+                        SummaryStat(label = "Tracked", value = "$trackedMetricCount", modifier = Modifier.weight(1f))
+                        SummaryStat(label = "Goals", value = "$goalCount", modifier = Modifier.weight(1f))
                     }
                 }
 
@@ -122,21 +127,25 @@ fun ProfileScreen(
                     SettingRow(
                         icon = profileIcon("health"),
                         title = "Health Connect",
-                        subtitle = "5 data sources connected",
+                        subtitle = if (sourceCount == 0) {
+                            "Not connected yet"
+                        } else {
+                            "$connectedSourceCount of $sourceCount sources connected"
+                        },
                         onClick = onOpenHealthConnect,
                     )
                     SettingDivider()
                     SettingRow(
                         icon = profileIcon("goals"),
                         title = "Goals & Targets",
-                        subtitle = "Manage your health goals",
+                        subtitle = "$goalCount goals configured",
                         onClick = onOpenGoals,
                     )
                     SettingDivider()
                     SettingRow(
                         icon = profileIcon("storage"),
                         title = "Data Storage",
-                        subtitle = "All data stored locally",
+                        subtitle = lastSyncLabel ?: "All data stored locally",
                         onClick = {},
                     )
                 }
@@ -215,7 +224,7 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = "All your health data is stored exclusively on this device. No cloud sync, no third-party access.",
+                            text = "All your health data is stored exclusively on this device. No cloud sync, no third-party access. ${lastSyncLabel ?: "No sync has completed yet."}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

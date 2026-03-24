@@ -26,6 +26,9 @@ class InMemoryDashboardRepository(
                 unit = latest.unit,
                 trendPercent = 0.0,
                 goalTarget = goal?.targetValue,
+                sourceId = latest.sourceId,
+                weekValues = listOf(latest.value),
+                monthValues = listOf(latest.value),
             )
         }
 

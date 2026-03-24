@@ -23,7 +23,7 @@ import com.cyberdoc.app.data.local.entity.SyncRunEntity
         GoalEntity::class,
         SyncRunEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class CyberDocDatabase : RoomDatabase() {

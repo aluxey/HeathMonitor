@@ -19,6 +19,7 @@ import com.cyberdoc.app.domain.service.DailyAggregateCalculator
 import com.cyberdoc.app.domain.service.DefaultMetricsNormalizer
 import com.cyberdoc.app.domain.usecase.BootstrapMvpDataUseCase
 import com.cyberdoc.app.domain.usecase.GetDashboardSnapshotUseCase
+import com.cyberdoc.app.domain.usecase.GetGoalProgressUseCase
 import com.cyberdoc.app.domain.usecase.RegisterManualMetricUseCase
 import com.cyberdoc.app.domain.usecase.SyncHealthConnectDataUseCase
 import com.cyberdoc.app.domain.usecase.TriggerSyncUseCase
@@ -44,6 +45,7 @@ class DefaultAppContainer(
 
     override val dashboardRepository: DashboardRepository =
         RoomDashboardRepository(
+            aggregateDao = aggregateDao,
             metricDao = metricDao,
             goalDao = goalDao,
             sourceDao = sourceDao,
@@ -69,15 +71,24 @@ class DefaultAppContainer(
         AndroidHealthConnectRepository(context = appContext)
 
     override val bootstrapMvpDataUseCase = BootstrapMvpDataUseCase(
-        dashboardRepository = dashboardRepository,
         goalRepository = goalRepository,
         sourceRepository = sourceRepository,
         timeProvider = clock,
     )
 
     override val getDashboardSnapshotUseCase = GetDashboardSnapshotUseCase(dashboardRepository)
+    override val getGoalProgressUseCase = GetGoalProgressUseCase(
+        goalRepository = goalRepository,
+        dashboardRepository = dashboardRepository,
+    )
     override val upsertGoalUseCase = UpsertGoalUseCase(goalRepository)
-    override val registerManualMetricUseCase = RegisterManualMetricUseCase(metricRepository)
+    override val registerManualMetricUseCase = RegisterManualMetricUseCase(
+        metricRepository = metricRepository,
+        dailyAggregateRepository = dailyAggregateRepository,
+        sourceRepository = sourceRepository,
+        aggregateCalculator = aggregateCalculator,
+        timeProvider = clock,
+    )
     override val triggerSyncUseCase = TriggerSyncUseCase(syncRepository)
     override val syncHealthConnectDataUseCase = SyncHealthConnectDataUseCase(
         healthConnectRepository = healthConnectRepository,

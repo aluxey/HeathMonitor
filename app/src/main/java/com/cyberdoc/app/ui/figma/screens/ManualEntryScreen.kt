@@ -17,10 +17,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -36,21 +39,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
+import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.ui.figma.components.MetricBadge
 import com.cyberdoc.app.ui.figma.components.SmallBackChip
-import com.cyberdoc.app.ui.theme.Chart1
-import com.cyberdoc.app.ui.theme.Chart2
-import com.cyberdoc.app.ui.theme.Chart3
-import com.cyberdoc.app.ui.theme.Chart4
+import com.cyberdoc.app.ui.figma.model.ManualEntryDraft
+import com.cyberdoc.app.ui.figma.model.manualEntryMetricTypes
+import com.cyberdoc.app.ui.figma.model.metricColor
+import com.cyberdoc.app.ui.figma.model.metricDisplayUnit
+import com.cyberdoc.app.ui.figma.model.metricId
+import com.cyberdoc.app.ui.figma.model.metricTitle
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
 
 private data class EntryType(
-    val id: String,
+    val metricType: MetricType,
     val label: String,
     val unit: String,
     val color: androidx.compose.ui.graphics.Color,
@@ -58,22 +62,30 @@ private data class EntryType(
 )
 
 @Composable
-fun ManualEntryScreen(onBack: () -> Unit) {
+fun ManualEntryScreen(
+    isSaving: Boolean,
+    saveMessage: String?,
+    saveError: String?,
+    onSave: (ManualEntryDraft) -> Unit,
+    onBack: () -> Unit,
+) {
     val entries = remember {
-        listOf(
-            EntryType("hydration", "Water Intake", "liters", Chart3, "2.5"),
-            EntryType("weight", "Weight", "kg", Chart1, "70"),
-            EntryType("height", "Height", "cm", Chart2, "175"),
-            EntryType("temperature", "Temperature", "°C", Chart4, "36.5"),
-        )
+        manualEntryMetricTypes().map { type ->
+            EntryType(
+                metricType = type,
+                label = metricTitle(type),
+                unit = metricDisplayUnit(type),
+                color = metricColor(type),
+                placeholder = defaultPlaceholder(type),
+            )
+        }
     }
-    var selectedType by remember { mutableStateOf<EntryType?>(null) }
+    var selectedType by remember { mutableStateOf(entries.firstOrNull()) }
     var value by remember { mutableStateOf("") }
-    var showSuccess by remember { mutableStateOf(false) }
 
-    LaunchedEffect(showSuccess) {
-        if (showSuccess) {
-            delay(1200)
+    LaunchedEffect(saveMessage) {
+        if (saveMessage != null) {
+            delay(900)
             onBack()
         }
     }
@@ -98,30 +110,18 @@ fun ManualEntryScreen(onBack: () -> Unit) {
                 )
             }
 
-            AnimatedVisibility(visible = showSuccess) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.CheckCircleOutline,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = "Entry saved successfully",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
+            AnimatedVisibility(visible = saveMessage != null) {
+                FeedbackCard(
+                    message = saveMessage ?: "",
+                    isError = false,
+                )
+            }
+
+            AnimatedVisibility(visible = saveError != null) {
+                FeedbackCard(
+                    message = saveError ?: "",
+                    isError = true,
+                )
             }
 
             Text(
@@ -132,17 +132,20 @@ fun ManualEntryScreen(onBack: () -> Unit) {
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.height(250.dp),
+                modifier = Modifier.height(170.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 userScrollEnabled = false,
             ) {
                 items(entries) { entry ->
-                    val selected = selectedType?.id == entry.id
+                    val selected = selectedType?.metricType == entry.metricType
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedType = entry },
+                            .clickable {
+                                selectedType = entry
+                                value = ""
+                            },
                         shape = RoundedCornerShape(22.dp),
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(
@@ -159,7 +162,7 @@ fun ManualEntryScreen(onBack: () -> Unit) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            MetricBadge(metricId = entry.id, color = entry.color)
+                            MetricBadge(metricId = metricId(entry.metricType), color = entry.color)
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = entry.label,
@@ -225,7 +228,7 @@ fun ManualEntryScreen(onBack: () -> Unit) {
                         }
                     }
 
-                    if (entry.id == "hydration") {
+                    if (entry.metricType == MetricType.HYDRATION) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(
                                 text = "Quick add",
@@ -260,8 +263,17 @@ fun ManualEntryScreen(onBack: () -> Unit) {
             shadowElevation = 8.dp,
         ) {
             Button(
-                onClick = { showSuccess = true },
-                enabled = selectedType != null && value.isNotBlank() && !showSuccess,
+                onClick = {
+                    val selectedMetric = selectedType ?: return@Button
+                    val parsedValue = value.toDoubleOrNull() ?: return@Button
+                    onSave(
+                        ManualEntryDraft(
+                            metricType = selectedMetric.metricType,
+                            value = parsedValue,
+                        ),
+                    )
+                },
+                enabled = selectedType != null && value.toDoubleOrNull() != null && !isSaving,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp)
@@ -270,7 +282,7 @@ fun ManualEntryScreen(onBack: () -> Unit) {
                 shape = RoundedCornerShape(18.dp),
             ) {
                 Text(
-                    text = "Save Entry",
+                    text = if (isSaving) "Saving..." else "Save Entry",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -278,3 +290,52 @@ fun ManualEntryScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun FeedbackCard(
+    message: String,
+    isError: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (isError) {
+            MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+        } else {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+        },
+        border = BorderStroke(
+            1.dp,
+            if (isError) {
+                MaterialTheme.colorScheme.error.copy(alpha = 0.16f)
+            } else {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = if (isError) Icons.Rounded.ErrorOutline else Icons.Rounded.CheckCircleOutline,
+                contentDescription = null,
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+private fun defaultPlaceholder(metricType: MetricType): String =
+    when (metricType) {
+        MetricType.WEIGHT -> "70"
+        MetricType.HYDRATION -> "2.5"
+        MetricType.CALORIES_IN -> "1800"
+        else -> "0"
+    }

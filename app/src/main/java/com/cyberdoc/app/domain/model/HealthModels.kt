@@ -56,6 +56,11 @@ data class Goal(
     val isActive: Boolean,
 )
 
+data class GoalProgress(
+    val goal: Goal,
+    val currentValue: Double,
+)
+
 data class SyncRun(
     val id: String,
     val sourceId: String,
@@ -72,6 +77,9 @@ data class DashboardMetric(
     val unit: String,
     val trendPercent: Double,
     val goalTarget: Double?,
+    val sourceId: String?,
+    val weekValues: List<Double>,
+    val monthValues: List<Double>,
 )
 
 data class DashboardSnapshot(

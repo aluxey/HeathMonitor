@@ -8,6 +8,7 @@ import com.cyberdoc.app.domain.repository.SourceRepository
 import com.cyberdoc.app.domain.repository.SyncRepository
 import com.cyberdoc.app.domain.usecase.BootstrapMvpDataUseCase
 import com.cyberdoc.app.domain.usecase.GetDashboardSnapshotUseCase
+import com.cyberdoc.app.domain.usecase.GetGoalProgressUseCase
 import com.cyberdoc.app.domain.usecase.RegisterManualMetricUseCase
 import com.cyberdoc.app.domain.usecase.SyncHealthConnectDataUseCase
 import com.cyberdoc.app.domain.usecase.TriggerSyncUseCase
@@ -25,6 +26,7 @@ interface AppContainer {
 
     val bootstrapMvpDataUseCase: BootstrapMvpDataUseCase
     val getDashboardSnapshotUseCase: GetDashboardSnapshotUseCase
+    val getGoalProgressUseCase: GetGoalProgressUseCase
     val upsertGoalUseCase: UpsertGoalUseCase
     val registerManualMetricUseCase: RegisterManualMetricUseCase
     val triggerSyncUseCase: TriggerSyncUseCase
