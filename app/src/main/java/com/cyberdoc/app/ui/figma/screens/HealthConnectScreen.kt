@@ -46,16 +46,23 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cyberdoc.app.app.di.AppGraph
+import com.cyberdoc.app.domain.model.MetricSourceSetting
 import com.cyberdoc.app.integration.healthconnect.HealthConnectAvailability
 import com.cyberdoc.app.integration.healthconnect.HealthConnectPermissions
 import com.cyberdoc.app.integration.healthconnect.HealthDataType
 import com.cyberdoc.app.ui.figma.components.metricIcon
+import com.cyberdoc.app.ui.figma.model.metricTitle
 import kotlinx.coroutines.launch
 
 private data class PermissionOption(
     val type: HealthDataType,
     val label: String,
     val description: String,
+)
+
+private data class MetricSourceDiagnostic(
+    val title: String,
+    val sources: List<String>,
 )
 
 @Composable
@@ -87,6 +94,7 @@ fun HealthConnectScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var lastRequestedCount by remember { mutableStateOf(0) }
+    var sourceDiagnostics by remember { mutableStateOf<List<MetricSourceDiagnostic>>(emptyList()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
@@ -136,6 +144,9 @@ fun HealthConnectScreen(
                 granted.isEmpty() -> "No permission granted yet. Tap Connect to continue."
                 else -> null
             }
+            sourceDiagnostics = runCatching {
+                diagnostics(container.getMetricSourceSettingsUseCase())
+            }.getOrDefault(emptyList())
             loading = false
         }
     }
@@ -246,6 +257,57 @@ fun HealthConnectScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "Detected metric sources",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "Only apps that actually wrote a metric through Health Connect appear here. If Zepp is missing for Sleep, this app cannot offer it as a selectable source.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (sourceDiagnostics.isEmpty()) {
+                            Text(
+                                text = "No imported metric sources yet. Run a sync after granting permissions.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            sourceDiagnostics.forEachIndexed { index, diagnostic ->
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = diagnostic.title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        text = diagnostic.sources.joinToString(separator = ", ").ifBlank {
+                                            "No source detected for this metric"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (index < sourceDiagnostics.lastIndex) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                }
+                            }
                         }
                     }
                 }
@@ -401,3 +463,11 @@ private fun PermissionIcon(type: HealthDataType) {
         }
     }
 }
+
+private fun diagnostics(settings: List<MetricSourceSetting>): List<MetricSourceDiagnostic> =
+    settings.map { setting ->
+        MetricSourceDiagnostic(
+            title = metricTitle(setting.metricType),
+            sources = setting.options.map { it.displayName }.sorted(),
+        )
+    }

@@ -158,8 +158,8 @@ fun dashboardSnapshotToMetrics(
         }
 
         fallback.copy(
-            value = formatMetricValue(type, metric.value),
-            unit = metricDisplayUnit(type),
+            value = formatDashboardMetricValue(type, metric.value),
+            unit = dashboardMetricUnit(type),
             trendLabel = metric.trendPercent.takeIf { it != 0.0 }?.let { trend ->
                 "${if (trend > 0) "+" else ""}${trend.roundToInt()}%"
             },
@@ -237,7 +237,7 @@ private fun defaultMetricUi(metricType: MetricType): MetricUi {
         id = presentation.id,
         title = presentation.title,
         value = "xx",
-        unit = metricDisplayUnit(metricType),
+        unit = dashboardMetricUnit(metricType),
         trendLabel = null,
         trendUp = true,
         source = "En attente",
@@ -306,6 +306,25 @@ private fun formatMetricValue(metricType: MetricType, rawValue: Double): String 
         MetricType.HYDRATION,
         MetricType.WEIGHT -> String.format(Locale.US, "%.1f", displayValue)
     }
+}
+
+private fun formatDashboardMetricValue(metricType: MetricType, rawValue: Double): String =
+    when (metricType) {
+        MetricType.SLEEP_DURATION -> formatSleepDuration(rawValue)
+        else -> formatMetricValue(metricType, rawValue)
+    }
+
+private fun dashboardMetricUnit(metricType: MetricType): String =
+    when (metricType) {
+        MetricType.SLEEP_DURATION -> ""
+        else -> metricDisplayUnit(metricType)
+    }
+
+private fun formatSleepDuration(rawValue: Double): String {
+    val totalMinutes = rawValue.roundToInt().coerceAtLeast(0)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return String.format(Locale.US, "%d h %02d", hours, minutes)
 }
 
 private fun chartValue(metricType: MetricType, rawValue: Double): Double =

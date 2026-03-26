@@ -50,7 +50,12 @@ class SyncHealthConnectDataUseCase(
                 )
             }
 
-            val importFrom = startedAt.minus(daysBack + 1, ChronoUnit.DAYS)
+            val importFrom = startedAt
+                .minus(daysBack + 1, ChronoUnit.DAYS)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant()
             val readResult = healthConnectRepository.readRecords(from = importFrom, to = startedAt)
             upsertMetricSources(readResult.records, startedAt)
             metricRepository.deleteImportedInRange(from = importFrom, to = startedAt)

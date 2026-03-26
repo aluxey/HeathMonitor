@@ -6,17 +6,23 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
+import java.time.ZoneId
+import kotlin.reflect.KClass
 
 class AndroidHealthConnectRepository(
     context: Context,
 ) : HealthConnectRepository {
     private val appContext = context.applicationContext
+    private val zoneId: ZoneId = ZoneId.systemDefault()
 
     override suspend fun availability(): HealthConnectAvailability =
         when (HealthConnectClient.getSdkStatus(appContext, PROVIDER_PACKAGE_NAME)) {
@@ -104,41 +110,75 @@ class AndroidHealthConnectRepository(
         )
     }
 
-    private suspend fun readSteps(from: Instant, to: Instant): List<HealthConnectRawRecord> =
-        client().readRecords(
-            ReadRecordsRequest(
-                recordType = StepsRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(from, to),
-            ),
-        ).records.map { record ->
-            HealthConnectRawRecord(
-                dataType = HealthDataType.STEPS,
-                value = record.count.toDouble(),
-                unit = "count",
-                startAt = record.startTime,
-                endAt = record.endTime,
-                sourceAppId = record.metadata.dataOrigin.packageName,
-                sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = stableExternalId(
-                    fallbackType = HealthDataType.STEPS,
-                    sourceAppId = record.metadata.dataOrigin.packageName,
-                    startAt = record.startTime,
-                    endAt = record.endTime,
-                    value = record.count.toDouble(),
-                    unit = "count",
-                    clientRecordId = record.metadata.clientRecordId,
-                ),
-            )
+    private suspend fun readSteps(from: Instant, to: Instant): List<HealthConnectRawRecord> {
+        val rawRecords = readAllRecords(
+            recordType = StepsRecord::class,
+            from = from,
+            to = to,
+        )
+        if (rawRecords.isEmpty()) return emptyList()
+
+        val sources = rawRecords
+            .mapNotNull { it.metadata.dataOrigin.packageName.takeIf(String::isNotBlank) }
+            .distinct()
+        val days = generateSequence(
+            from.atZone(zoneId).toLocalDate(),
+        ) { current ->
+            current.plusDays(1).takeIf { it <= to.atZone(zoneId).toLocalDate() }
         }
 
+        return buildList {
+            for (sourceId in sources) {
+                for (day in days) {
+                    val dayStart = day.atStartOfDay(zoneId).toInstant()
+                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                    val rangeStart = maxOf(from, dayStart)
+                    val rangeEnd = minOf(to, dayEnd)
+                    if (rangeStart >= rangeEnd) continue
+
+                    val total = client().aggregate(
+                        AggregateRequest(
+                            metrics = setOf(StepsRecord.COUNT_TOTAL),
+                            timeRangeFilter = TimeRangeFilter.between(rangeStart, rangeEnd),
+                            dataOriginFilter = setOf(DataOrigin(packageName = sourceId)),
+                        ),
+                    )[StepsRecord.COUNT_TOTAL]?.toDouble() ?: 0.0
+
+                    if (total <= 0.0) continue
+
+                    add(
+                        HealthConnectRawRecord(
+                            dataType = HealthDataType.STEPS,
+                            value = total,
+                            unit = "count",
+                            startAt = rangeStart,
+                            endAt = rangeEnd,
+                            sourceAppId = sourceId,
+                            sourceAppName = sourceId,
+                            externalId = stableExternalId(
+                                fallbackType = HealthDataType.STEPS,
+                                sourceAppId = sourceId,
+                                startAt = rangeStart,
+                                endAt = rangeEnd,
+                                value = total,
+                                unit = "count",
+                                clientRecordId = null,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun readSleep(from: Instant, to: Instant): List<HealthConnectRawRecord> =
-        client().readRecords(
-            ReadRecordsRequest(
-                recordType = SleepSessionRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(from, to),
-            ),
-        ).records.map { record ->
-            val hours = java.time.Duration.between(record.startTime, record.endTime).toMinutes().toDouble() / 60.0
+        readAllRecords(
+            recordType = SleepSessionRecord::class,
+            from = from,
+            to = to,
+        ).map { record ->
+            val minutes = sleepMinutes(record)
+            val hours = minutes / 60.0
             HealthConnectRawRecord(
                 dataType = HealthDataType.SLEEP,
                 value = hours,
@@ -316,10 +356,54 @@ class AndroidHealthConnectRepository(
                 value.toString(),
             ).joinToString(separator = "|")
 
+    private suspend fun <T : Record> readAllRecords(
+        recordType: KClass<T>,
+        from: Instant,
+        to: Instant,
+    ): List<T> {
+        val records = mutableListOf<T>()
+        var nextPageToken: String? = null
+
+        do {
+            val response = client().readRecords(
+                ReadRecordsRequest(
+                    recordType = recordType,
+                    timeRangeFilter = TimeRangeFilter.between(from, to),
+                    pageToken = nextPageToken,
+                ),
+            )
+            records += response.records
+            nextPageToken = response.pageToken
+        } while (nextPageToken != null)
+
+        return records
+    }
+
+    private fun sleepMinutes(record: SleepSessionRecord): Double {
+        val sleepingStageMinutes = record.stages
+            .filter { stage -> stage.stage in ASLEEP_STAGE_TYPES }
+            .sumOf { stage ->
+                java.time.Duration.between(stage.startTime, stage.endTime).toMinutes()
+            }
+            .toDouble()
+
+        if (sleepingStageMinutes > 0.0) {
+            return sleepingStageMinutes
+        }
+
+        return java.time.Duration.between(record.startTime, record.endTime).toMinutes().toDouble()
+    }
+
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(appContext)
 
     companion object {
         private const val PROVIDER_PACKAGE_NAME = "com.google.android.apps.healthdata"
+        private val ASLEEP_STAGE_TYPES = setOf(
+            SleepSessionRecord.STAGE_TYPE_SLEEPING,
+            SleepSessionRecord.STAGE_TYPE_LIGHT,
+            SleepSessionRecord.STAGE_TYPE_DEEP,
+            SleepSessionRecord.STAGE_TYPE_REM,
+        )
     }
 }
