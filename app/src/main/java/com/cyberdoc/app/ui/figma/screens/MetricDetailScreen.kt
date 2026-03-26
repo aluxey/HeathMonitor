@@ -89,7 +89,7 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(
-                                        text = "Current",
+                                        text = "Valeur actuelle",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -117,6 +117,14 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                                 TrendLabel(label = it, trendUp = metric.trendUp)
                             }
 
+                            metric.emptyStateMessage?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
                             metric.goal?.let { goal ->
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(
@@ -125,14 +133,14 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = "Daily goal",
+                                            text = "Objectif journalier",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Text(
                                             text = currentValue?.let {
-                                                "${(goalProgress * 100).roundToInt()}% complete"
-                                            } ?: "No data yet",
+                                                "${(goalProgress * 100).roundToInt()}% atteint"
+                                            } ?: "Pas encore de donnees",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium,
                                         )
@@ -160,7 +168,7 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
             ) {
                 SegmentedControl(
                     selectedIndex = if (period == Period.WEEK) 0 else 1,
-                    labels = listOf("Week", "Month"),
+                    labels = listOf("Semaine", "Mois"),
                     onSelect = { period = if (it == 0) Period.WEEK else Period.MONTH },
                 )
 
@@ -174,7 +182,7 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Text(
-                            text = if (period == Period.WEEK) "Last 7 days" else "Last 30 days",
+                            text = if (period == Period.WEEK) "7 derniers jours" else "30 derniers jours",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                         )
@@ -186,7 +194,7 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                             )
                         } else {
                             Text(
-                                text = "No history available yet for this metric.",
+                                text = metric.emptyStateMessage ?: "Aucun historique disponible pour cette metrique.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -200,13 +208,13 @@ fun MetricDetailScreen(metric: MetricUi, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         StatValueCard(
-                            label = "Average",
+                            label = "Moyenne",
                             value = formatStatValue(data.average()),
                             unit = metric.unit,
                             modifier = Modifier.weight(1f),
                         )
                         StatValueCard(
-                            label = "Best day",
+                            label = "Meilleur jour",
                             value = formatStatValue((data.maxOrNull() ?: 0f).toDouble()),
                             unit = metric.unit,
                             modifier = Modifier.weight(1f),

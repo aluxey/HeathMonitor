@@ -28,6 +28,7 @@ import com.cyberdoc.app.app.di.AppGraph
 import com.cyberdoc.app.core.AppResult
 import com.cyberdoc.app.domain.model.Goal
 import com.cyberdoc.app.domain.model.MetricRecord
+import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.model.PeriodType
 import com.cyberdoc.app.domain.model.SourceStatus
 import com.cyberdoc.app.domain.model.SourceType
@@ -36,9 +37,11 @@ import com.cyberdoc.app.ui.figma.components.BottomNav
 import com.cyberdoc.app.ui.figma.model.GoalDraft
 import com.cyberdoc.app.ui.figma.model.GoalUi
 import com.cyberdoc.app.ui.figma.model.ManualEntryDraft
+import com.cyberdoc.app.ui.figma.model.MetricSourceSettingUi
 import com.cyberdoc.app.ui.figma.model.dashboardSnapshotToMetrics
 import com.cyberdoc.app.ui.figma.model.goalProgressToUi
 import com.cyberdoc.app.ui.figma.model.metricInputToRawValue
+import com.cyberdoc.app.ui.figma.model.metricSourceSettingsToUi
 import com.cyberdoc.app.ui.figma.model.metricStorageUnit
 import com.cyberdoc.app.ui.figma.model.metricsData
 import com.cyberdoc.app.ui.figma.navigation.AppTab
@@ -75,6 +78,7 @@ fun FigmaDesignApp() {
     var selectedMetricId by remember { mutableStateOf("steps") }
     var metrics by remember { mutableStateOf(metricsData()) }
     var goals by remember { mutableStateOf<List<GoalUi>>(emptyList()) }
+    var metricSourceSettings by remember { mutableStateOf<List<MetricSourceSettingUi>>(emptyList()) }
     var lastSyncLabel by remember { mutableStateOf<String?>(null) }
     var sourceCount by remember { mutableStateOf(0) }
     var connectedSourceCount by remember { mutableStateOf(0) }
@@ -105,12 +109,17 @@ fun FigmaDesignApp() {
                 container.syncHealthConnectDataUseCase(daysBack = 30)
             }
 
+            metricSourceSettings = runCatching {
+                metricSourceSettingsToUi(container.getMetricSourceSettingsUseCase())
+            }.getOrDefault(emptyList())
             val snapshot = runCatching { container.getDashboardSnapshotUseCase() }.getOrNull()
-            metrics = dashboardSnapshotToMetrics(snapshot)
+            metrics = dashboardSnapshotToMetrics(snapshot, metricSourceSettings)
             goals = runCatching { goalProgressToUi(container.getGoalProgressUseCase()) }.getOrDefault(emptyList())
 
             val sources = snapshot?.sources ?: runCatching { container.sourceRepository.all() }.getOrDefault(emptyList())
-            val healthSources = sources.filter { it.type == SourceType.HEALTH_CONNECT }
+            val healthSources = sources.filter {
+                it.type == SourceType.HEALTH_CONNECT || it.type == SourceType.HEALTH_CONNECT_APP
+            }
             sourceCount = healthSources.size
             connectedSourceCount = healthSources.count { it.status == SourceStatus.CONNECTED }
             trackedMetricCount = snapshot?.metrics?.size ?: 0
@@ -188,6 +197,11 @@ fun FigmaDesignApp() {
                 goalState = ActionUiState(error = result.error.message)
             }
         }
+    }
+
+    suspend fun saveMetricSourcePreference(metricType: MetricType, sourceId: String?) {
+        container.setMetricSourcePreferenceUseCase(metricType = metricType, sourceId = sourceId)
+        refreshAppState(syncHealthData = false)
     }
 
     LaunchedEffect(Unit) {
@@ -329,8 +343,12 @@ fun FigmaDesignApp() {
                                             trackedMetricCount = trackedMetricCount,
                                             goalCount = goals.size,
                                             lastSyncLabel = lastSyncLabel,
+                                            metricSourceSettings = metricSourceSettings,
                                             onOpenGoals = { appTab = AppTab.GOALS },
                                             onOpenHealthConnect = { rootStage = RootStage.HEALTH_CONNECT },
+                                            onSelectMetricSource = { metricType, sourceId ->
+                                                scope.launch { saveMetricSourcePreference(metricType, sourceId) }
+                                            },
                                         )
                                     }
 

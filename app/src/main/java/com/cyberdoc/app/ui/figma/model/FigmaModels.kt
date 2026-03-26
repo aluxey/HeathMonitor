@@ -1,8 +1,10 @@
 package com.cyberdoc.app.ui.figma.model
 
 import androidx.compose.ui.graphics.Color
+import com.cyberdoc.app.core.resolveSourceDisplayName
 import com.cyberdoc.app.domain.model.DashboardSnapshot
 import com.cyberdoc.app.domain.model.GoalProgress
+import com.cyberdoc.app.domain.model.MetricSourceSetting
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.ui.theme.Chart1
 import com.cyberdoc.app.ui.theme.Chart2
@@ -20,6 +22,7 @@ data class MetricUi(
     val trendLabel: String?,
     val trendUp: Boolean,
     val source: String,
+    val emptyStateMessage: String?,
     val color: Color,
     val goal: Float?,
     val weekData: List<Float>,
@@ -45,6 +48,20 @@ data class ManualEntryDraft(
 data class GoalDraft(
     val metricType: MetricType,
     val targetValue: Double,
+)
+
+data class MetricSourceOptionUi(
+    val sourceId: String?,
+    val label: String,
+)
+
+data class MetricSourceSettingUi(
+    val metricType: MetricType,
+    val metricId: String,
+    val title: String,
+    val summary: String,
+    val selectedSourceId: String?,
+    val options: List<MetricSourceOptionUi>,
 )
 
 private data class MetricPresentation(
@@ -115,13 +132,30 @@ fun metricInputToRawValue(metricType: MetricType, enteredValue: Double): Double 
 
 fun metricsData(): List<MetricUi> = dashboardMetricOrder.map(::defaultMetricUi)
 
-fun dashboardSnapshotToMetrics(snapshot: DashboardSnapshot?): List<MetricUi> {
+fun dashboardSnapshotToMetrics(
+    snapshot: DashboardSnapshot?,
+    sourceSettings: List<MetricSourceSettingUi> = emptyList(),
+): List<MetricUi> {
     if (snapshot == null) return metricsData()
 
     val snapshotByType = snapshot.metrics.associateBy { it.metricType }
+    val sourcesById = snapshot.sources.associateBy { it.id }
+    val settingsByType = sourceSettings.associateBy { it.metricType }
     return dashboardMetricOrder.map { type ->
         val fallback = defaultMetricUi(type)
-        val metric = snapshotByType[type] ?: return@map fallback
+        val metric = snapshotByType[type]
+        val setting = settingsByType[type]
+
+        if (metric == null) {
+            return@map if (setting?.selectedSourceId != null) {
+                fallback.copy(
+                    source = setting.summary,
+                    emptyStateMessage = "Aucune donnee depuis ${setting.summary}",
+                )
+            } else {
+                fallback
+            }
+        }
 
         fallback.copy(
             value = formatMetricValue(type, metric.value),
@@ -130,17 +164,57 @@ fun dashboardSnapshotToMetrics(snapshot: DashboardSnapshot?): List<MetricUi> {
                 "${if (trend > 0) "+" else ""}${trend.roundToInt()}%"
             },
             trendUp = metric.trendPercent >= 0,
-            source = when (metric.sourceId) {
-                "manual" -> "Manual"
-                null -> fallback.source
-                else -> "Synced"
-            },
+            source = metric.sourceId?.let { sourceId ->
+                sourcesById[sourceId]?.displayName
+                    ?: resolveSourceDisplayName(sourceId = sourceId, sourceName = null)
+            } ?: fallback.source,
+            emptyStateMessage = null,
             goal = metric.goalTarget?.toFloat(),
             weekData = metric.weekValues.map { chartValue(type, it).toFloat() },
             monthData = metric.monthValues.map { chartValue(type, it).toFloat() },
         )
     }
 }
+
+fun metricSourceSettingsToUi(settings: List<MetricSourceSetting>): List<MetricSourceSettingUi> =
+    settings
+        .sortedBy { dashboardMetricOrder.indexOf(it.metricType).let { index -> if (index >= 0) index else Int.MAX_VALUE } }
+        .map { setting ->
+            val optionsById = setting.options.associateBy { it.sourceId }
+            val selectedLabel = setting.selectedSourceId?.let { sourceId -> optionsById[sourceId]?.displayName }
+            val effectiveLabel = setting.effectiveSourceId?.let { sourceId -> optionsById[sourceId]?.displayName }
+            MetricSourceSettingUi(
+                metricType = setting.metricType,
+                metricId = metricId(setting.metricType),
+                title = metricTitle(setting.metricType),
+                summary = when {
+                    selectedLabel != null -> selectedLabel
+                    effectiveLabel != null -> "Automatique ($effectiveLabel)"
+                    else -> "Aucune source disponible"
+                },
+                selectedSourceId = setting.selectedSourceId,
+                options = buildList {
+                    add(
+                        MetricSourceOptionUi(
+                            sourceId = null,
+                            label = if (effectiveLabel != null) {
+                                "Automatique ($effectiveLabel)"
+                            } else {
+                                "Automatique"
+                            },
+                        ),
+                    )
+                    addAll(
+                        setting.options.map { option ->
+                            MetricSourceOptionUi(
+                                sourceId = option.sourceId,
+                                label = option.displayName,
+                            )
+                        },
+                    )
+                },
+            )
+        }
 
 fun goalProgressToUi(progressList: List<GoalProgress>): List<GoalUi> =
     progressList.map { progress ->
@@ -166,7 +240,8 @@ private fun defaultMetricUi(metricType: MetricType): MetricUi {
         unit = metricDisplayUnit(metricType),
         trendLabel = null,
         trendUp = true,
-        source = "Pending",
+        source = "En attente",
+        emptyStateMessage = null,
         color = presentation.color,
         goal = null,
         weekData = emptyList(),

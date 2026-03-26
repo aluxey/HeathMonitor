@@ -100,17 +100,17 @@ fun BottomNav(tab: AppTab?, onTab: (AppTab) -> Unit) {
             horizontalArrangement = Arrangement.SpaceAround,
         ) {
             NavItem(
-                label = "Home",
+                label = "Accueil",
                 icon = Icons.Rounded.Home,
                 selected = tab == AppTab.HOME,
             ) { onTab(AppTab.HOME) }
             NavItem(
-                label = "Goals",
+                label = "Objectifs",
                 icon = Icons.Rounded.TrendingUp,
                 selected = tab == AppTab.GOALS,
             ) { onTab(AppTab.GOALS) }
             NavItem(
-                label = "Profile",
+                label = "Profil",
                 icon = Icons.Rounded.Settings,
                 selected = tab == AppTab.PROFILE,
             ) { onTab(AppTab.PROFILE) }
@@ -294,6 +294,14 @@ fun MetricCard(metric: MetricUi, onClick: () -> Unit) {
                 TrendLabel(
                     label = it,
                     trendUp = metric.trendUp,
+                )
+            }
+
+            metric.emptyStateMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -764,12 +772,12 @@ fun MetricBadge(
 fun StatusBadge(source: String) {
     val normalized = source.lowercase(Locale.ROOT)
     val icon = when (normalized) {
-        "synced" -> Icons.Rounded.CloudDownload
-        "manual" -> Icons.Rounded.Edit
-        "pending" -> Icons.Rounded.Schedule
-        else -> Icons.Rounded.RadioButtonUnchecked
+        "synced", "synchronise", "synchronisee" -> Icons.Rounded.CloudDownload
+        "manual", "manuel", "saisie manuelle" -> Icons.Rounded.Edit
+        "pending", "en attente" -> Icons.Rounded.Schedule
+        else -> Icons.Rounded.CloudDownload
     }
-    val label = source.ifBlank { "Unknown" }
+    val label = source.ifBlank { "Inconnue" }
 
     Surface(
         shape = RoundedCornerShape(999.dp),
@@ -813,7 +821,7 @@ fun TrendLabel(label: String, trendUp: Boolean) {
             color = if (trendUp) Chart2 else MaterialTheme.colorScheme.error,
         )
         Text(
-            text = "vs last week",
+            text = "vs semaine precedente",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

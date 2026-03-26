@@ -71,12 +71,13 @@ fun DailySummaryScreen(
                 id = metric.id,
                 label = metric.title,
                 value = if (hasData) displayMetricValue(metric.value, metric.unit) else "xx",
-                target = goal?.let { formatGoalValue(it.target, it.unit) } ?: "Not set",
+                target = goal?.let { formatGoalValue(it.target, it.unit) } ?: "Non defini",
                 statusLabel = when {
-                    !hasData -> "No data"
-                    goal == null -> "No goal"
-                    goalReached -> "Reached"
-                    else -> "In progress"
+                    metric.emptyStateMessage != null -> metric.emptyStateMessage
+                    !hasData -> "Aucune donnee"
+                    goal == null -> "Aucun objectif"
+                    goalReached -> "Atteint"
+                    else -> "En cours"
                 },
                 hasData = hasData,
                 achieved = goalReached,
@@ -262,10 +263,10 @@ fun DailySummaryScreen(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "Target",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                text = "Objectif",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                                     Text(
                                         text = metric.target,
                                         style = MaterialTheme.typography.bodyMedium,
