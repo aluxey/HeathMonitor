@@ -11,6 +11,7 @@ import java.util.UUID
 class DailyAggregateCalculator {
     fun calculate(records: List<MetricRecord>, computedAt: Instant): List<DailyAggregate> =
         records
+            .distinctBy(::aggregateRecordKey)
             .groupBy { record ->
                 Pair(
                     metricLocalDate(
@@ -46,4 +47,14 @@ class DailyAggregateCalculator {
                     computedAt = computedAt,
                 )
             }
+
+    private fun aggregateRecordKey(record: MetricRecord): String =
+        record.externalId ?: listOf(
+            record.metricType.name,
+            record.startAt.toEpochMilli().toString(),
+            record.endAt.toEpochMilli().toString(),
+            record.value.toString(),
+            record.unit,
+            record.sourceId,
+        ).joinToString(separator = ":")
 }

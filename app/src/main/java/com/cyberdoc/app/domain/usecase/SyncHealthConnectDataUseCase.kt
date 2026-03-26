@@ -4,7 +4,6 @@ import com.cyberdoc.app.core.AppResult
 import com.cyberdoc.app.core.IntegrationUnavailableError
 import com.cyberdoc.app.core.TimeProvider
 import com.cyberdoc.app.core.UnexpectedError
-import com.cyberdoc.app.core.metricLocalDate
 import com.cyberdoc.app.core.resolveSourceDisplayName
 import com.cyberdoc.app.domain.model.DataSource
 import com.cyberdoc.app.domain.model.SourceStatus
@@ -19,7 +18,6 @@ import com.cyberdoc.app.domain.service.DailyAggregateCalculator
 import com.cyberdoc.app.domain.service.MetricsNormalizer
 import com.cyberdoc.app.integration.healthconnect.HealthConnectAvailability
 import com.cyberdoc.app.integration.healthconnect.HealthConnectRepository
-import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 

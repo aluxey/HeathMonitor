@@ -21,6 +21,8 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
             val metricType = raw.dataType.toMetricType() ?: return@mapNotNull null
             val normalizedUnit = normalizeUnit(metricType = metricType, unit = raw.unit)
             val normalizedValue = normalizeValue(metricType = metricType, value = raw.value, unit = raw.unit)
+            val resolvedSourceId = raw.sourceAppId?.takeIf { it.isNotBlank() } ?: fallbackSourceId
+
             MetricRecord(
                 id = UUID.randomUUID().toString(),
                 metricType = metricType,
@@ -28,8 +30,14 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
                 unit = normalizedUnit,
                 startAt = raw.startAt,
                 endAt = raw.endAt,
-                sourceId = raw.sourceAppId?.takeIf { it.isNotBlank() } ?: fallbackSourceId,
-                externalId = raw.externalId,
+                sourceId = resolvedSourceId,
+                externalId = raw.externalId ?: fallbackExternalId(
+                    raw = raw,
+                    metricType = metricType,
+                    sourceId = resolvedSourceId,
+                    normalizedValue = normalizedValue,
+                    normalizedUnit = normalizedUnit,
+                ),
                 isManual = false,
                 createdAt = importedAt,
             )
@@ -67,6 +75,23 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
 
             else -> value
         }
+
+    private fun fallbackExternalId(
+        raw: HealthConnectRawRecord,
+        metricType: MetricType,
+        sourceId: String,
+        normalizedValue: Double,
+        normalizedUnit: String,
+    ): String =
+        listOf(
+            "health-connect",
+            metricType.name,
+            sourceId,
+            raw.startAt.toEpochMilli().toString(),
+            raw.endAt.toEpochMilli().toString(),
+            normalizedValue.toString(),
+            normalizedUnit,
+        ).joinToString(separator = ":")
 
     private fun HealthDataType.toMetricType(): MetricType? =
         when (this) {

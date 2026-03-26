@@ -14,6 +14,7 @@ import com.cyberdoc.app.domain.repository.DashboardRepository
 import com.cyberdoc.app.domain.repository.MetricSourceSettingsRepository
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.abs
 
 class RoomDashboardRepository(
@@ -23,27 +24,45 @@ class RoomDashboardRepository(
     private val metricSourceSettingsRepository: MetricSourceSettingsRepository,
     private val timeProvider: TimeProvider,
 ) : DashboardRepository {
+    private val zoneId: ZoneId = ZoneId.systemDefault()
+    private val dailyMetricTypes = setOf(
+        MetricType.STEPS,
+        MetricType.EXERCISE_DURATION,
+        MetricType.HYDRATION,
+        MetricType.CALORIES_IN,
+    )
+
     override suspend fun snapshot(): DashboardSnapshot {
+        val today = timeProvider.now().atZone(zoneId).toLocalDate()
         val metrics = MetricType.entries.mapNotNull { metricType ->
             val sourceSetting = metricSourceSettingsRepository.setting(metricType)
-            val latest = when (val effectiveSourceId = sourceSetting.effectiveSourceId) {
-                null -> metricDao.latest(metricType.name)
-                else -> metricDao.latestBySource(metricType.name, effectiveSourceId)
-            } ?: return@mapNotNull null
+            val effectiveSourceId = sourceSetting.effectiveSourceId
+            val latest = effectiveSourceId?.let { metricDao.latestBySource(metricType.name, it) }
+                ?: metricDao.latest(metricType.name)
+                ?: return@mapNotNull null
 
             val goal = goalDao.activeGoal(metricType.name)
-            val anchorDate = metricLocalDate(
-                metricType = metricType,
-                startAt = Instant.ofEpochMilli(latest.startAtEpochMillis),
-                endAt = Instant.ofEpochMilli(latest.endAtEpochMillis),
-            )
+            val anchorDate = if (metricType in dailyMetricTypes) {
+                today
+            } else {
+                metricLocalDate(
+                    metricType = metricType,
+                    startAt = Instant.ofEpochMilli(latest.startAtEpochMillis),
+                    endAt = Instant.ofEpochMilli(latest.endAtEpochMillis),
+                )
+            }
+
             val monthValues = denseSeries(
                 metricType = metricType,
-                sourceId = sourceSetting.effectiveSourceId,
+                sourceId = effectiveSourceId,
                 fromDate = anchorDate.minusDays(29),
                 toDate = anchorDate,
             )
             val weekValues = monthValues.takeLast(7)
+
+            if (metricType in dailyMetricTypes && (weekValues.lastOrNull() ?: 0.0) == 0.0) {
+                return@mapNotNull null
+            }
 
             DashboardMetric(
                 metricType = metricType,
@@ -51,7 +70,7 @@ class RoomDashboardRepository(
                 unit = latest.unit,
                 trendPercent = calculateTrendPercent(weekValues),
                 goalTarget = goal?.targetValue,
-                sourceId = sourceSetting.effectiveSourceId ?: latest.sourceId,
+                sourceId = effectiveSourceId ?: latest.sourceId,
                 weekValues = weekValues,
                 monthValues = monthValues,
             )
