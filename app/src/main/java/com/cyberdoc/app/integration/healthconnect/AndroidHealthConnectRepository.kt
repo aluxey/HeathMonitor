@@ -119,7 +119,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.STEPS,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = record.count.toDouble(),
+                    unit = "count",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -139,7 +147,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.SLEEP,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = hours,
+                    unit = "hour",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -159,7 +175,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.EXERCISE,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = durationMinutes,
+                    unit = "minute",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -178,7 +202,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.time,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.WEIGHT,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.time,
+                    endAt = record.time,
+                    value = record.weight.inKilograms,
+                    unit = "kg",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -197,7 +229,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.HYDRATION,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = record.volume.inLiters,
+                    unit = "l",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -217,7 +257,15 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.CALORIES_IN,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = energy,
+                    unit = "kcal",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
 
@@ -237,9 +285,36 @@ class AndroidHealthConnectRepository(
                 endAt = record.endTime,
                 sourceAppId = record.metadata.dataOrigin.packageName,
                 sourceAppName = record.metadata.dataOrigin.packageName,
-                externalId = record.metadata.clientRecordId,
+                externalId = stableExternalId(
+                    fallbackType = HealthDataType.HEART_RATE,
+                    sourceAppId = record.metadata.dataOrigin.packageName,
+                    startAt = record.startTime,
+                    endAt = record.endTime,
+                    value = latestSample.beatsPerMinute.toDouble(),
+                    unit = "bpm",
+                    clientRecordId = record.metadata.clientRecordId,
+                ),
             )
         }
+
+    private fun stableExternalId(
+        fallbackType: HealthDataType,
+        sourceAppId: String?,
+        startAt: Instant,
+        endAt: Instant,
+        value: Double,
+        unit: String,
+        clientRecordId: String?,
+    ): String =
+        clientRecordId?.takeIf { it.isNotBlank() }
+            ?: listOf(
+                fallbackType.name,
+                sourceAppId.orEmpty(),
+                startAt.toEpochMilli().toString(),
+                endAt.toEpochMilli().toString(),
+                unit,
+                value.toString(),
+            ).joinToString(separator = "|")
 
     private fun client(): HealthConnectClient =
         HealthConnectClient.getOrCreate(appContext)

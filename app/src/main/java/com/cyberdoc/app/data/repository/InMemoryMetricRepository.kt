@@ -1,11 +1,12 @@
 package com.cyberdoc.app.data.repository
 
+import com.cyberdoc.app.core.metricLocalDate
 import com.cyberdoc.app.data.inmemory.InMemoryStore
 import com.cyberdoc.app.domain.model.MetricRecord
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.repository.MetricRepository
+import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 class InMemoryMetricRepository(
     private val store: InMemoryStore,
@@ -31,9 +32,21 @@ class InMemoryMetricRepository(
         }
     }
 
+    override suspend fun deleteImportedInRange(from: Instant, to: Instant) {
+        store.metrics.removeAll { record ->
+            !record.isManual &&
+                record.endAt > from &&
+                record.startAt < to
+        }
+    }
+
     override suspend fun findByDay(day: LocalDate): List<MetricRecord> =
         store.metrics.filter {
-            it.startAt.atZone(ZoneOffset.UTC).toLocalDate() == day
+            metricLocalDate(
+                metricType = it.metricType,
+                startAt = it.startAt,
+                endAt = it.endAt,
+            ) == day
         }
 
     override suspend fun latest(metricType: MetricType): MetricRecord? =

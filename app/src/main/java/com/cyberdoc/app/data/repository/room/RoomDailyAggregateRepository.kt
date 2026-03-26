@@ -14,6 +14,10 @@ class RoomDailyAggregateRepository(
         dao.upsertAll(aggregates.map { it.toEntity() })
     }
 
+    override suspend fun deleteByDateRange(from: LocalDate, to: LocalDate) {
+        dao.deleteByDateRange(fromDate = from.toString(), toDate = to.toString())
+    }
+
     override suspend fun byDate(date: LocalDate): List<DailyAggregate> =
         dao.byDate(date.toString()).map { it.toDomain() }
 

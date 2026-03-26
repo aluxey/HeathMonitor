@@ -24,6 +24,12 @@ class InMemoryDailyAggregateRepository(
         }
     }
 
+    override suspend fun deleteByDateRange(from: LocalDate, to: LocalDate) {
+        store.dailyAggregates.removeAll { aggregate ->
+            !aggregate.date.isBefore(from) && !aggregate.date.isAfter(to)
+        }
+    }
+
     override suspend fun byDate(date: LocalDate): List<DailyAggregate> =
         store.dailyAggregates
             .asSequence()

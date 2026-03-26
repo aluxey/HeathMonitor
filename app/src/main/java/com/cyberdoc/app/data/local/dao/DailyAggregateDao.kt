@@ -10,6 +10,9 @@ interface DailyAggregateDao {
     @Upsert
     suspend fun upsertAll(entities: List<DailyAggregateEntity>)
 
+    @Query("DELETE FROM daily_aggregate WHERE date >= :fromDate AND date <= :toDate")
+    suspend fun deleteByDateRange(fromDate: String, toDate: String)
+
     @Query(
         "SELECT * FROM daily_aggregate " +
             "WHERE metricType = :metricType ORDER BY date DESC, computedAtEpochMillis DESC LIMIT 1",

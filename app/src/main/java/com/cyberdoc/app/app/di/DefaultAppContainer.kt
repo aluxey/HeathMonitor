@@ -3,6 +3,7 @@ package com.cyberdoc.app.app.di
 import android.content.Context
 import com.cyberdoc.app.core.SystemTimeProvider
 import com.cyberdoc.app.data.local.CyberDocDatabase
+import com.cyberdoc.app.data.repository.preferences.SharedPrefsMetricSourceSettingsRepository
 import com.cyberdoc.app.data.repository.room.RoomDailyAggregateRepository
 import com.cyberdoc.app.data.repository.room.RoomDashboardRepository
 import com.cyberdoc.app.data.repository.room.RoomGoalRepository
@@ -13,6 +14,7 @@ import com.cyberdoc.app.domain.repository.DashboardRepository
 import com.cyberdoc.app.domain.repository.DailyAggregateRepository
 import com.cyberdoc.app.domain.repository.GoalRepository
 import com.cyberdoc.app.domain.repository.MetricRepository
+import com.cyberdoc.app.domain.repository.MetricSourceSettingsRepository
 import com.cyberdoc.app.domain.repository.SourceRepository
 import com.cyberdoc.app.domain.repository.SyncRepository
 import com.cyberdoc.app.domain.service.DailyAggregateCalculator
@@ -20,7 +22,9 @@ import com.cyberdoc.app.domain.service.DefaultMetricsNormalizer
 import com.cyberdoc.app.domain.usecase.BootstrapMvpDataUseCase
 import com.cyberdoc.app.domain.usecase.GetDashboardSnapshotUseCase
 import com.cyberdoc.app.domain.usecase.GetGoalProgressUseCase
+import com.cyberdoc.app.domain.usecase.GetMetricSourceSettingsUseCase
 import com.cyberdoc.app.domain.usecase.RegisterManualMetricUseCase
+import com.cyberdoc.app.domain.usecase.SetMetricSourcePreferenceUseCase
 import com.cyberdoc.app.domain.usecase.SyncHealthConnectDataUseCase
 import com.cyberdoc.app.domain.usecase.TriggerSyncUseCase
 import com.cyberdoc.app.domain.usecase.UpsertGoalUseCase
@@ -43,15 +47,6 @@ class DefaultAppContainer(
     private val normalizer = DefaultMetricsNormalizer()
     private val aggregateCalculator = DailyAggregateCalculator()
 
-    override val dashboardRepository: DashboardRepository =
-        RoomDashboardRepository(
-            aggregateDao = aggregateDao,
-            metricDao = metricDao,
-            goalDao = goalDao,
-            sourceDao = sourceDao,
-            timeProvider = clock,
-        )
-
     override val dailyAggregateRepository: DailyAggregateRepository =
         RoomDailyAggregateRepository(aggregateDao)
 
@@ -61,6 +56,13 @@ class DefaultAppContainer(
     override val metricRepository: MetricRepository =
         RoomMetricRepository(metricDao)
 
+    override val metricSourceSettingsRepository: MetricSourceSettingsRepository =
+        SharedPrefsMetricSourceSettingsRepository(
+            context = appContext,
+            metricDao = metricDao,
+            sourceDao = sourceDao,
+        )
+
     override val sourceRepository: SourceRepository =
         RoomSourceRepository(sourceDao)
 
@@ -69,6 +71,15 @@ class DefaultAppContainer(
 
     override val healthConnectRepository: HealthConnectRepository =
         AndroidHealthConnectRepository(context = appContext)
+
+    override val dashboardRepository: DashboardRepository =
+        RoomDashboardRepository(
+            metricDao = metricDao,
+            goalDao = goalDao,
+            sourceDao = sourceDao,
+            metricSourceSettingsRepository = metricSourceSettingsRepository,
+            timeProvider = clock,
+        )
 
     override val bootstrapMvpDataUseCase = BootstrapMvpDataUseCase(
         goalRepository = goalRepository,
@@ -81,6 +92,9 @@ class DefaultAppContainer(
         goalRepository = goalRepository,
         dashboardRepository = dashboardRepository,
     )
+    override val getMetricSourceSettingsUseCase = GetMetricSourceSettingsUseCase(
+        metricSourceSettingsRepository,
+    )
     override val upsertGoalUseCase = UpsertGoalUseCase(goalRepository)
     override val registerManualMetricUseCase = RegisterManualMetricUseCase(
         metricRepository = metricRepository,
@@ -88,6 +102,9 @@ class DefaultAppContainer(
         sourceRepository = sourceRepository,
         aggregateCalculator = aggregateCalculator,
         timeProvider = clock,
+    )
+    override val setMetricSourcePreferenceUseCase = SetMetricSourcePreferenceUseCase(
+        metricSourceSettingsRepository,
     )
     override val triggerSyncUseCase = TriggerSyncUseCase(syncRepository)
     override val syncHealthConnectDataUseCase = SyncHealthConnectDataUseCase(

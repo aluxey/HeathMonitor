@@ -13,6 +13,9 @@ interface DataSourceDao {
     @Query("SELECT * FROM data_source WHERE id = :id LIMIT 1")
     suspend fun byId(id: String): DataSourceEntity?
 
+    @Query("SELECT * FROM data_source WHERE id IN (:ids)")
+    suspend fun byIds(ids: List<String>): List<DataSourceEntity>
+
     @Upsert
     suspend fun upsert(entity: DataSourceEntity)
 }

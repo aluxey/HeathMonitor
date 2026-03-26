@@ -1,54 +1,57 @@
 package com.cyberdoc.app.data.repository.room
 
 import com.cyberdoc.app.core.TimeProvider
-import com.cyberdoc.app.data.local.dao.DailyAggregateDao
+import com.cyberdoc.app.core.dayRange
+import com.cyberdoc.app.core.metricLocalDate
 import com.cyberdoc.app.data.local.dao.DataSourceDao
 import com.cyberdoc.app.data.local.dao.GoalDao
 import com.cyberdoc.app.data.local.dao.MetricRecordDao
+import com.cyberdoc.app.data.local.entity.MetricRecordEntity
 import com.cyberdoc.app.domain.model.DashboardMetric
 import com.cyberdoc.app.domain.model.DashboardSnapshot
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.repository.DashboardRepository
+import com.cyberdoc.app.domain.repository.MetricSourceSettingsRepository
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import kotlin.math.abs
 
 class RoomDashboardRepository(
-    private val aggregateDao: DailyAggregateDao,
     private val metricDao: MetricRecordDao,
     private val goalDao: GoalDao,
     private val sourceDao: DataSourceDao,
+    private val metricSourceSettingsRepository: MetricSourceSettingsRepository,
     private val timeProvider: TimeProvider,
 ) : DashboardRepository {
     override suspend fun snapshot(): DashboardSnapshot {
         val metrics = MetricType.entries.mapNotNull { metricType ->
-            val latestAggregate = aggregateDao.latest(metricType.name)
-            val latest = metricDao.latest(metricType.name) ?: return@mapNotNull null
+            val sourceSetting = metricSourceSettingsRepository.setting(metricType)
+            val latest = when (val effectiveSourceId = sourceSetting.effectiveSourceId) {
+                null -> metricDao.latest(metricType.name)
+                else -> metricDao.latestBySource(metricType.name, effectiveSourceId)
+            } ?: return@mapNotNull null
+
             val goal = goalDao.activeGoal(metricType.name)
-            val anchorDate = latestAggregate?.let { LocalDate.parse(it.date) }
-                ?: Instant.ofEpochMilli(latest.endAtEpochMillis).atZone(ZoneOffset.UTC).toLocalDate()
-            val weekValues = latestAggregate?.let {
-                denseSeries(
-                    metricType = metricType,
-                    fromDate = anchorDate.minusDays(6),
-                    toDate = anchorDate,
-                )
-            } ?: fallbackSeries(days = 7, latestValue = latest.value)
-            val monthValues = latestAggregate?.let {
-                denseSeries(
-                    metricType = metricType,
-                    fromDate = anchorDate.minusDays(29),
-                    toDate = anchorDate,
-                )
-            } ?: fallbackSeries(days = 30, latestValue = latest.value)
+            val anchorDate = metricLocalDate(
+                metricType = metricType,
+                startAt = Instant.ofEpochMilli(latest.startAtEpochMillis),
+                endAt = Instant.ofEpochMilli(latest.endAtEpochMillis),
+            )
+            val monthValues = denseSeries(
+                metricType = metricType,
+                sourceId = sourceSetting.effectiveSourceId,
+                fromDate = anchorDate.minusDays(29),
+                toDate = anchorDate,
+            )
+            val weekValues = monthValues.takeLast(7)
+
             DashboardMetric(
                 metricType = metricType,
-                value = latestAggregate?.value ?: latest.value,
-                unit = latestAggregate?.unit ?: latest.unit,
+                value = monthValues.lastOrNull() ?: aggregateValue(metricType, listOf(latest)),
+                unit = latest.unit,
                 trendPercent = calculateTrendPercent(weekValues),
                 goalTarget = goal?.targetValue,
-                sourceId = latestAggregate?.sourceId ?: latest.sourceId,
+                sourceId = sourceSetting.effectiveSourceId ?: latest.sourceId,
                 weekValues = weekValues,
                 monthValues = monthValues,
             )
@@ -63,24 +66,58 @@ class RoomDashboardRepository(
 
     private suspend fun denseSeries(
         metricType: MetricType,
+        sourceId: String?,
         fromDate: LocalDate,
         toDate: LocalDate,
     ): List<Double> {
-        val byDate = aggregateDao.trend(
+        val fromEpochMillis = dayRange(fromDate).first
+        val toEpochMillis = dayRange(toDate).second
+        val records = sourceId?.let { selectedSourceId ->
+            metricDao.byMetricAndSource(
+                metricType = metricType.name,
+                sourceId = selectedSourceId,
+                fromEpochMillis = fromEpochMillis,
+                toEpochMillis = toEpochMillis,
+            )
+        } ?: metricDao.byMetric(
             metricType = metricType.name,
-            fromDate = fromDate.toString(),
-            toDate = toDate.toString(),
-        ).associateBy { LocalDate.parse(it.date) }
+            fromEpochMillis = fromEpochMillis,
+            toEpochMillis = toEpochMillis,
+        )
+
+        val valuesByDate = records
+            .groupBy {
+                metricLocalDate(
+                    metricType = metricType,
+                    startAt = Instant.ofEpochMilli(it.startAtEpochMillis),
+                    endAt = Instant.ofEpochMilli(it.endAtEpochMillis),
+                )
+            }
+            .mapValues { (_, grouped) -> aggregateValue(metricType, grouped) }
 
         return generateSequence(fromDate) { current ->
             current.plusDays(1).takeIf { it <= toDate }
         }
-            .map { date -> byDate[date]?.value ?: 0.0 }
+            .map { date -> valuesByDate[date] ?: 0.0 }
             .toList()
     }
 
-    private fun fallbackSeries(days: Int, latestValue: Double): List<Double> =
-        List(days - 1) { 0.0 } + latestValue
+    private fun aggregateValue(
+        metricType: MetricType,
+        records: List<MetricRecordEntity>,
+    ): Double {
+        val sample = records.maxByOrNull { it.endAtEpochMillis } ?: return 0.0
+        return when (metricType) {
+            MetricType.STEPS,
+            MetricType.SLEEP_DURATION,
+            MetricType.HYDRATION,
+            MetricType.CALORIES_IN,
+            MetricType.EXERCISE_DURATION -> records.sumOf { it.value }
+
+            MetricType.WEIGHT,
+            MetricType.HEART_RATE -> sample.value
+        }
+    }
 
     private fun calculateTrendPercent(values: List<Double>): Double {
         if (values.size < 2) return 0.0

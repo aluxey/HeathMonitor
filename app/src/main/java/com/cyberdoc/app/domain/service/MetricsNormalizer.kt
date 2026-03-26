@@ -8,14 +8,14 @@ import java.time.Instant
 import java.util.UUID
 
 interface MetricsNormalizer {
-    fun normalize(records: List<HealthConnectRawRecord>, importedAt: Instant, sourceId: String): List<MetricRecord>
+    fun normalize(records: List<HealthConnectRawRecord>, importedAt: Instant, fallbackSourceId: String): List<MetricRecord>
 }
 
 class DefaultMetricsNormalizer : MetricsNormalizer {
     override fun normalize(
         records: List<HealthConnectRawRecord>,
         importedAt: Instant,
-        sourceId: String,
+        fallbackSourceId: String,
     ): List<MetricRecord> =
         records.mapNotNull { raw ->
             val metricType = raw.dataType.toMetricType() ?: return@mapNotNull null
@@ -28,7 +28,7 @@ class DefaultMetricsNormalizer : MetricsNormalizer {
                 unit = normalizedUnit,
                 startAt = raw.startAt,
                 endAt = raw.endAt,
-                sourceId = sourceId,
+                sourceId = raw.sourceAppId?.takeIf { it.isNotBlank() } ?: fallbackSourceId,
                 externalId = raw.externalId,
                 isManual = false,
                 createdAt = importedAt,

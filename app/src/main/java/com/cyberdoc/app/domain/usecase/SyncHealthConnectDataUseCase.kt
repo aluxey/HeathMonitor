@@ -4,6 +4,8 @@ import com.cyberdoc.app.core.AppResult
 import com.cyberdoc.app.core.IntegrationUnavailableError
 import com.cyberdoc.app.core.TimeProvider
 import com.cyberdoc.app.core.UnexpectedError
+import com.cyberdoc.app.core.metricLocalDate
+import com.cyberdoc.app.core.resolveSourceDisplayName
 import com.cyberdoc.app.domain.model.DataSource
 import com.cyberdoc.app.domain.model.SourceStatus
 import com.cyberdoc.app.domain.model.SourceType
@@ -17,7 +19,7 @@ import com.cyberdoc.app.domain.service.DailyAggregateCalculator
 import com.cyberdoc.app.domain.service.MetricsNormalizer
 import com.cyberdoc.app.integration.healthconnect.HealthConnectAvailability
 import com.cyberdoc.app.integration.healthconnect.HealthConnectRepository
-import java.time.ZoneOffset
+import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -50,19 +52,24 @@ class SyncHealthConnectDataUseCase(
                 )
             }
 
-            val from = startedAt.minus(daysBack, ChronoUnit.DAYS)
-            val readResult = healthConnectRepository.readRecords(from = from, to = startedAt)
+            val importFrom = startedAt.minus(daysBack + 1, ChronoUnit.DAYS)
+            val readResult = healthConnectRepository.readRecords(from = importFrom, to = startedAt)
+            upsertMetricSources(readResult.records, startedAt)
+            metricRepository.deleteImportedInRange(from = importFrom, to = startedAt)
             val normalized = normalizer.normalize(
                 records = readResult.records,
                 importedAt = startedAt,
-                sourceId = HEALTH_CONNECT_SOURCE_ID,
+                fallbackSourceId = HEALTH_CONNECT_SOURCE_ID,
             )
             metricRepository.upsertAll(normalized)
 
-            val impactedDays = normalized
-                .map { it.startAt.atZone(ZoneOffset.UTC).toLocalDate() }
-                .distinct()
-            val aggregates = impactedDays.flatMap { day ->
+            val fromDate = importFrom.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            val toDate = startedAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            dailyAggregateRepository.deleteByDateRange(from = fromDate, to = toDate)
+            val daysToRebuild = generateSequence(fromDate) { current ->
+                current.plusDays(1).takeIf { it <= toDate }
+            }.toList()
+            val aggregates = daysToRebuild.flatMap { day ->
                 aggregateCalculator.calculate(
                     records = metricRepository.findByDay(day),
                     computedAt = startedAt,
@@ -134,6 +141,32 @@ class SyncHealthConnectDataUseCase(
             lastSyncAt = lastSyncAt,
             lastError = lastError,
         )
+
+    private suspend fun upsertMetricSources(
+        records: List<com.cyberdoc.app.integration.healthconnect.HealthConnectRawRecord>,
+        syncedAt: java.time.Instant,
+    ) {
+        records
+            .groupBy { record -> record.sourceAppId?.takeIf { it.isNotBlank() } }
+            .forEach { (sourceAppId, sourceRecords) ->
+                if (sourceAppId == null) return@forEach
+
+                sourceRepository.upsert(
+                    DataSource(
+                        id = sourceAppId,
+                        type = SourceType.HEALTH_CONNECT_APP,
+                        displayName = resolveSourceDisplayName(
+                            sourceId = sourceAppId,
+                            sourceName = sourceRecords.firstNotNullOfOrNull { it.sourceAppName },
+                        ),
+                        status = SourceStatus.CONNECTED,
+                        priority = 1,
+                        lastSyncAt = syncedAt,
+                        lastError = null,
+                    ),
+                )
+            }
+    }
 
     companion object {
         const val HEALTH_CONNECT_SOURCE_ID = "health_connect"

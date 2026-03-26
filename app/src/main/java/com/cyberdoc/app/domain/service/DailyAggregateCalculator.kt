@@ -1,18 +1,25 @@
 package com.cyberdoc.app.domain.service
 
+import com.cyberdoc.app.core.metricLocalDate
 import com.cyberdoc.app.domain.model.DailyAggregate
 import com.cyberdoc.app.domain.model.MetricRecord
 import com.cyberdoc.app.domain.model.MetricType
 import com.cyberdoc.app.domain.model.QualityFlag
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.UUID
 
 class DailyAggregateCalculator {
     fun calculate(records: List<MetricRecord>, computedAt: Instant): List<DailyAggregate> =
         records
             .groupBy { record ->
-                Pair(record.startAt.atZone(ZoneOffset.UTC).toLocalDate(), record.metricType)
+                Pair(
+                    metricLocalDate(
+                        metricType = record.metricType,
+                        startAt = record.startAt,
+                        endAt = record.endAt,
+                    ),
+                    record.metricType,
+                )
             }
             .map { (key, grouped) ->
                 val date = key.first

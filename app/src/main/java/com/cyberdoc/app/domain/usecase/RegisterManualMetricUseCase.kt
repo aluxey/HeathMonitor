@@ -1,5 +1,6 @@
 package com.cyberdoc.app.domain.usecase
 
+import com.cyberdoc.app.core.metricLocalDate
 import com.cyberdoc.app.core.AppResult
 import com.cyberdoc.app.core.TimeProvider
 import com.cyberdoc.app.core.ValidationError
@@ -11,7 +12,6 @@ import com.cyberdoc.app.domain.repository.DailyAggregateRepository
 import com.cyberdoc.app.domain.repository.MetricRepository
 import com.cyberdoc.app.domain.repository.SourceRepository
 import com.cyberdoc.app.domain.service.DailyAggregateCalculator
-import java.time.ZoneOffset
 
 class RegisterManualMetricUseCase(
     private val metricRepository: MetricRepository,
@@ -47,7 +47,11 @@ class RegisterManualMetricUseCase(
         )
         metricRepository.add(manualRecord)
 
-        val day = manualRecord.startAt.atZone(ZoneOffset.UTC).toLocalDate()
+        val day = metricLocalDate(
+            metricType = manualRecord.metricType,
+            startAt = manualRecord.startAt,
+            endAt = manualRecord.endAt,
+        )
         val dayRecords = metricRepository.findByDay(day)
         val aggregates = aggregateCalculator.calculate(
             records = dayRecords,
